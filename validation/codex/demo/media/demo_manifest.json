@@ -1,0 +1,104 @@
+{
+  "schema_version": "1.0",
+  "generated_at": "2026-06-20T23:15:47.642606+00:00",
+  "software_version": "0.7.2",
+  "synthetic_results": true,
+  "seed": 20260620,
+  "cases_per_stratum": 1,
+  "clean_controls": 2,
+  "pipelines": [
+    "noop",
+    "metadata-only",
+    "baseline"
+  ],
+  "review_cases": 12,
+  "summary": {
+    "noop": {
+      "cases": 12,
+      "injections": 10,
+      "removed_injections": 0,
+      "residual_injections": 10,
+      "removal_rate": 0.0,
+      "removal_rate_ci95": [
+        0.0,
+        0.2775327998628892
+      ],
+      "auditor_detected_residuals": 10,
+      "auditor_residual_sensitivity": 1.0,
+      "auditor_residual_sensitivity_ci95": [
+        0.7224672001371107,
+        0.9999999999999999
+      ],
+      "clean_controls": 2,
+      "false_positive_controls": 0,
+      "false_positive_control_rate": 0.0,
+      "false_positive_control_rate_ci95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "readable_outputs": 12,
+      "basic_valid_outputs": 12,
+      "total_runtime_seconds": 0.09055380000063451,
+      "mean_runtime_seconds": 0.007546150000052876
+    },
+    "metadata-only": {
+      "cases": 12,
+      "injections": 10,
+      "removed_injections": 8,
+      "residual_injections": 2,
+      "removal_rate": 0.8,
+      "removal_rate_ci95": [
+        0.49016247153664183,
+        0.9433178485456247
+      ],
+      "auditor_detected_residuals": 2,
+      "auditor_residual_sensitivity": 1.0,
+      "auditor_residual_sensitivity_ci95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "clean_controls": 2,
+      "false_positive_controls": 0,
+      "false_positive_control_rate": 0.0,
+      "false_positive_control_rate_ci95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "readable_outputs": 12,
+      "basic_valid_outputs": 12,
+      "total_runtime_seconds": 0.03387059999658959,
+      "mean_runtime_seconds": 0.002822549999715799
+    },
+    "baseline": {
+      "cases": 12,
+      "injections": 10,
+      "removed_injections": 10,
+      "residual_injections": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95": [
+        0.7224672001371107,
+        0.9999999999999999
+      ],
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null,
+      "auditor_residual_sensitivity_ci95": null,
+      "clean_controls": 2,
+      "false_positive_controls": 0,
+      "false_positive_control_rate": 0.0,
+      "false_positive_control_rate_ci95": [
+        0.0,
+        0.6576197724933469
+      ],
+      "readable_outputs": 12,
+      "basic_valid_outputs": 12,
+      "total_runtime_seconds": 0.03366040000037174,
+      "mean_runtime_seconds": 0.0028050333333643116
+    }
+  },
+  "artifacts": {
+    "benchmark_manifest": "benchmark/manifest.json",
+    "review_database": "human-review.db",
+    "corpus_report": "corpus-report.json",
+    "publication_manifest": "publication/publication_manifest.json"
+  }
+}
