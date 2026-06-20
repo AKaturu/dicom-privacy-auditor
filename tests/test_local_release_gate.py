@@ -34,6 +34,7 @@ def test_release_gate_does_not_redact_urls_or_markers(tmp_path):
 
 def test_release_gate_output_is_owner_only(tmp_path):
     import json
+    import os
     import stat
 
     from scripts.run_local_release_gate import _atomic_json
@@ -41,4 +42,5 @@ def test_release_gate_output_is_owner_only(tmp_path):
     output = tmp_path / "gate.json"
     _atomic_json(output, {"status": "passed"})
     assert json.loads(output.read_text(encoding="utf-8"))["status"] == "passed"
-    assert stat.S_IMODE(output.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(output.stat().st_mode) == 0o600

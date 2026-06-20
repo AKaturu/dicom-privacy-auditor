@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import tarfile
 
 from scripts.package_native_release import _project_version, _write_tar_gz
@@ -20,7 +21,8 @@ def test_native_tar_archive_metadata_is_reproducible(tmp_path):
     assert hashlib.sha256(first.read_bytes()).digest() == hashlib.sha256(second.read_bytes()).digest()
     with tarfile.open(first) as archive:
         members = {item.name: item for item in archive.getmembers()}
-    assert members["package/DICOMPrivacyAuditor-CLI"].mode == 0o755
+    if os.name != "nt":
+        assert members["package/DICOMPrivacyAuditor-CLI"].mode == 0o755
     assert members["package/README.txt"].mode == 0o644
     assert all(item.uid == 0 and item.gid == 0 and item.mtime == 1781913600 for item in members.values())
 

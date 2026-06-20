@@ -220,7 +220,7 @@ def main(argv: list[str] | None = None) -> int:
     skipped = [item["name"] for item in results if item["status"] == "skipped"]
     payload = {
         "schema_version": "1.0",
-        "release": "0.7.1",
+        "release": "0.7.2",
         "started_at": started_at,
         "finished_at": _now(),
         "environment": {

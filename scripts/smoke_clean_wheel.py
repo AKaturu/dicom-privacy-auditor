@@ -36,7 +36,7 @@ def main() -> int:
 
     with tempfile.TemporaryDirectory(prefix="dpa-wheel-smoke-") as raw:
         root = Path(raw)
-        venv.EnvBuilder(with_pip=True, clear=True, system_site_packages=True).create(root)
+        venv.EnvBuilder(with_pip=True, clear=True, system_site_packages=False).create(root)
         bindir = root / ("Scripts" if os.name == "nt" else "bin")
         python = bindir / ("python.exe" if os.name == "nt" else "python")
         environment = {
@@ -44,6 +44,7 @@ def main() -> int:
             "PYTHONNOUSERSITE": "1",
             "PYTHONDONTWRITEBYTECODE": "1",
         }
+        environment.pop("PYTHONPATH", None)
         install = run(
             [
                 str(python),
@@ -51,6 +52,7 @@ def main() -> int:
                 "pip",
                 "install",
                 "--disable-pip-version-check",
+                "--force-reinstall",
                 "--no-deps",
                 str(wheels[0]),
             ],
@@ -67,6 +69,7 @@ def main() -> int:
                 "pip",
                 "install",
                 "--disable-pip-version-check",
+                "numpy>=1.26,<3.0",
                 "pydicom>=3.0,<4.0",
                 "Pillow>=10,<13",
                 "jsonschema>=4.23,<5",
@@ -99,7 +102,13 @@ def main() -> int:
         commands = json.loads(probe.stdout.strip().splitlines()[-1])
         failures: list[tuple[str, int, str]] = []
         for name in commands:
-            executable = bindir / (name + ".exe" if os.name == "nt" else name)
+            candidates = [bindir / name]
+            if os.name == "nt":
+                candidates.insert(0, bindir / f"{name}.exe")
+            executable = next((candidate for candidate in candidates if candidate.exists()), candidates[0])
+            if not executable.exists():
+                failures.append((name, 127, f"missing executable: {executable}"))
+                continue
             result = run([str(executable), "--help"], environment)
             if result.returncode not in {0, 2} or not result.stdout.strip():
                 failures.append((name, result.returncode, result.stdout[-500:]))
@@ -108,7 +117,7 @@ def main() -> int:
             [str(python), "-c", "import dicom_privacy_auditor as d; print(d.__version__)"],
             environment,
         )
-        if version.returncode or version.stdout.strip() != "0.7.1":
+        if version.returncode or version.stdout.strip() != "0.7.2":
             failures.append(("version", version.returncode, version.stdout))
         if failures:
             print(json.dumps(failures, indent=2))

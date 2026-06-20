@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.2 - 2026-06-20
+
+- Fixed Windows mypy validation for the Tk desktop folder opener without changing runtime behavior.
+- Bumped patch-version metadata after the validation-driven source change.
+
 ## 0.7.1 - 2026-06-20
 
 - Added Hypothesis property-based testing for arbitrary malformed DICOM byte streams and generated deeply nested datasets.

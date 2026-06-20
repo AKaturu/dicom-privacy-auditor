@@ -181,6 +181,9 @@ def generate_publication_package(
     generated.append(appendix_path)
 
     try:
+        import matplotlib
+
+        matplotlib.use("Agg", force=True)
         import matplotlib.pyplot as plt
 
         labels = [row["pipeline"] for row in overall]

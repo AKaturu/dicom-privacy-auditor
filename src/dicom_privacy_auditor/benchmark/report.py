@@ -6,6 +6,9 @@ from pathlib import Path
 
 def create_plots(evaluation_json: str | Path, output_dir: str | Path) -> list[Path]:
     """Create publication-oriented PNG figures from an evaluation JSON file."""
+    import matplotlib
+
+    matplotlib.use("Agg", force=True)
     import matplotlib.pyplot as plt
 
     payload = json.loads(Path(evaluation_json).read_text(encoding="utf-8"))

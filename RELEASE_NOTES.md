@@ -1,3 +1,11 @@
+# DICOM Privacy Auditor 0.7.2
+
+Version 0.7.2 is a validation-driven patch release. It fixes Windows mypy validation for the Tk desktop folder opener and keeps the external-validation claim boundary unchanged.
+
+## Claim boundary
+
+This release remains a research alpha and does not claim full MIDI-B execution, official-validator parity, institutional validation, independent review, trusted cross-platform signing, clinical safety, or regulatory compliance.
+
 # DICOM Privacy Auditor 0.7.1
 
 Version 0.7.1 is the final local adversarial-testing and installation-integrity release. It adds property-based malformed-DICOM testing, hostile archive defenses, crash-safe evidence writes, clean-wheel entry-point verification, documentation checks, and package-metadata validation.

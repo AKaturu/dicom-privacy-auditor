@@ -20,7 +20,7 @@ Do not tag a release unless the report status is `passed`. A skipped reproducibi
 ```bash
 SOURCE_DATE_EPOCH=1781913600 python scripts/build_release_distributions.py . --output dist --clean
 SOURCE_DATE_EPOCH=1781913600 python scripts/package_source_release.py . \
-  --output dist/dicom-privacy-auditor-v0.7.1-source.zip
+  --output dist/dicom-privacy-auditor-v0.7.2-source.zip
 python scripts/check_distribution_contents.py . dist
 ```
 

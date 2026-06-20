@@ -185,6 +185,7 @@ def test_evidence_build_rejects_overlap_and_symlink_sources(tmp_path):
 
 
 def test_evidence_outputs_are_private_and_archive_cannot_be_inside_source(tmp_path):
+    import os
     import stat
 
     from dicom_privacy_auditor.campaign.evidence import (
@@ -203,15 +204,19 @@ def test_evidence_outputs_are_private_and_archive_cannot_be_inside_source(tmp_pa
     parity = tmp_path / "parity.json"
     generate_review_sample(evaluation, sample)
     compare_evaluators(evaluation, evaluation, parity)
-    assert stat.S_IMODE(sample.stat().st_mode) == 0o600
-    assert stat.S_IMODE(parity.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(sample.stat().st_mode) == 0o600
+        assert stat.S_IMODE(parity.stat().st_mode) == 0o600
 
     workspace = tmp_path / "workspace"
     (workspace / "runs").mkdir(parents=True)
     (workspace / "runs" / "run.json").write_text("{}", encoding="utf-8")
     evidence = tmp_path / "evidence"
     build_evidence_package(workspace, evidence, campaign_id="x")
-    assert stat.S_IMODE(evidence.stat().st_mode) == 0o700
-    assert all(stat.S_IMODE(path.stat().st_mode) == 0o600 for path in evidence.rglob("*") if path.is_file())
+    if os.name != "nt":
+        assert stat.S_IMODE(evidence.stat().st_mode) == 0o700
+        assert all(
+            stat.S_IMODE(path.stat().st_mode) == 0o600 for path in evidence.rglob("*") if path.is_file()
+        )
     with pytest.raises(ValueError, match="outside the evidence directory"):
         archive_evidence_package(evidence, evidence / "self.tar.gz")

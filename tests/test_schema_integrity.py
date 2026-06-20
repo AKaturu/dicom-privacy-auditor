@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from scripts.check_schema_integrity import check
 
 
@@ -15,7 +17,10 @@ def test_schema_check_detects_public_package_drift(tmp_path):
     root = Path(__file__).resolve().parents[1]
     for name in ("schemas", "configs"):
         target = tmp_path / name
-        target.symlink_to(root / name, target_is_directory=True)
+        try:
+            target.symlink_to(root / name, target_is_directory=True)
+        except OSError:
+            pytest.skip("symbolic links are unavailable")
     package = tmp_path / "src" / "dicom_privacy_auditor" / "schemas"
     package.mkdir(parents=True)
     for source in (root / "src" / "dicom_privacy_auditor" / "schemas").glob("*.schema.json"):

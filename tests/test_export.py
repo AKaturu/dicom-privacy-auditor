@@ -1,4 +1,5 @@
 import json
+import os
 import stat
 
 from pydicom.dataset import Dataset
@@ -20,5 +21,6 @@ def test_exports(tmp_path):
     payload = json.loads(json_path.read_text())
     assert payload[0]["finding_count"] == 2
     assert "DIRECT_IDENTIFIER_PRESENT" in csv_path.read_text()
-    assert stat.S_IMODE(json_path.stat().st_mode) == 0o600
-    assert stat.S_IMODE(csv_path.stat().st_mode) == 0o600
+    if os.name != "nt":
+        assert stat.S_IMODE(json_path.stat().st_mode) == 0o600
+        assert stat.S_IMODE(csv_path.stat().st_mode) == 0o600

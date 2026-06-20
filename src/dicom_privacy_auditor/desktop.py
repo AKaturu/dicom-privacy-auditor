@@ -20,7 +20,7 @@ from .models import AuditReport
 
 def _open_folder(path: Path) -> None:
     if sys.platform == "win32":
-        os.startfile(path)  # type: ignore[attr-defined]
+        os.startfile(path)  # type: ignore[attr-defined, unused-ignore]
     elif sys.platform == "darwin":
         subprocess.run(["open", str(path)], check=False)
     else:

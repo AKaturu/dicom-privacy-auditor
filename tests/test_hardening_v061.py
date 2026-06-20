@@ -94,6 +94,7 @@ def test_native_build_dependency_guard(monkeypatch: pytest.MonkeyPatch) -> None:
 
 def test_publication_package_redacts_paths_and_uses_private_permissions(tmp_path: Path) -> None:
     import json
+    import os
     import stat
 
     from dicom_privacy_auditor.publication.generate import generate_publication_package
@@ -125,9 +126,10 @@ def test_publication_package_redacts_paths_and_uses_private_permissions(tmp_path
     assert str(workspace.resolve()) not in appendix
     assert manifest["paths_disclosed"] is False
     assert all(not Path(item["path"]).is_absolute() for item in manifest["inputs"])
-    assert stat.S_IMODE(output.stat().st_mode) == 0o700
-    for path in output.rglob("*"):
-        if path.is_file():
-            assert stat.S_IMODE(path.stat().st_mode) == 0o600
-        elif path.is_dir():
-            assert stat.S_IMODE(path.stat().st_mode) == 0o700
+    if os.name != "nt":
+        assert stat.S_IMODE(output.stat().st_mode) == 0o700
+        for path in output.rglob("*"):
+            if path.is_file():
+                assert stat.S_IMODE(path.stat().st_mode) == 0o600
+            elif path.is_dir():
+                assert stat.S_IMODE(path.stat().st_mode) == 0o700

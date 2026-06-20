@@ -54,7 +54,7 @@ The `build-native-release.yml` workflow builds on native GitHub-hosted runners f
 - macOS arm64 / Apple Silicon
 - macOS x64 / Intel
 
-Run the workflow manually from GitHub Actions or push a version tag such as `v0.7.1`. Each job performs a smoke test before uploading its archive. Tagged builds also create a draft GitHub Release containing archives, SHA-256 files, SBOMs, attestations, and per-platform `SIGNATURE-STATUS` records.
+Run the workflow manually from GitHub Actions or push a version tag such as `v0.7.2`. Each job performs a smoke test before uploading its archive. Tagged builds also create a draft GitHub Release containing archives, SHA-256 files, SBOMs, attestations, and per-platform `SIGNATURE-STATUS` records.
 
 ## macOS Gatekeeper
 

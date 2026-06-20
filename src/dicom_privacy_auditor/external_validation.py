@@ -78,7 +78,10 @@ def _command_check(name: str, command: str | None, *, fingerprint_mode: str = "n
         return Check(name, "invalid", f"invalid command syntax: {exc}")
     if not parts:
         return Check(name, "invalid", "empty command")
-    found = shutil.which(parts[0])
+    executable = parts[0]
+    if os.name == "nt" and len(executable) >= 2 and executable[0] == executable[-1] == '"':
+        executable = executable[1:-1]
+    found = shutil.which(executable)
     digest = _sha256(Path(found)) if found and fingerprint_mode != "none" and Path(found).is_file() else None
     return Check(
         name, "ready" if found else "missing", found or f"command not found: {parts[0]}", fingerprint=digest
