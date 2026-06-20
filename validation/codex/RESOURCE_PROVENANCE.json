@@ -1,0 +1,163 @@
+{
+  "authoritative_sources": [
+    {
+      "license_or_terms": "TCIA/Synapse/NCI terms must be accepted by the project owner before use",
+      "preflight_checks": [
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "midi_b_corpus",
+          "required": true,
+          "status": "missing"
+        },
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "midi_b_answer_key",
+          "required": true,
+          "status": "missing"
+        },
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "official_validator",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "not redistributed",
+      "resource": "MIDI-B validation/test collections, answer keys, mappings, and official validator",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [
+        "https://www.cancerimagingarchive.net/collection/midi-b-test-midi-b-validation/",
+        "https://www.synapse.org/MIDI_B_De_identification",
+        "https://www.cancer.gov/about-nci/organization/cbiit/news-events/news/2025/validate-and-test-your-dicom-de-identification-algorithms-using-midi-benchmark"
+      ],
+      "status": "missing",
+      "version_or_digest": null
+    },
+    {
+      "license_or_terms": "Orthanc image and component licenses require owner review",
+      "preflight_checks": [
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "orthanc_http",
+          "required": true,
+          "status": "missing"
+        },
+        {
+          "detail": "host/port not configured",
+          "fingerprint": null,
+          "name": "orthanc_dimse",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "no container or binary redistributed",
+      "resource": "Orthanc HTTP/DIMSE validation instance",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [
+        "https://orthanc.uclouvain.be/book/users/docker.html",
+        "https://hub.docker.com/r/orthancteam/orthanc"
+      ],
+      "status": "missing",
+      "version_or_digest": null
+    },
+    {
+      "license_or_terms": "RSNA/GitHub package terms require owner review",
+      "preflight_checks": [
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "rsna_anonymizer",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "no executable or project model redistributed",
+      "resource": "RSNA DICOM Anonymizer",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [
+        "https://www.rsna.org/research/imaging-research-tools",
+        "https://github.com/RSNA/Anonymizer",
+        "https://rsna.github.io/anonymizer/"
+      ],
+      "status": "missing",
+      "version_or_digest": null
+    },
+    {
+      "license_or_terms": "RSNA/MIRC CTP terms require owner review",
+      "preflight_checks": [
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "rsna_ctp",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "no JAR, installation, or pipeline redistributed",
+      "resource": "RSNA CTP",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [
+        "https://mircwiki.rsna.org/index.php?title=MIRC_CTP"
+      ],
+      "status": "missing",
+      "version_or_digest": null
+    },
+    {
+      "license_or_terms": "requires written institutional authorization and credentials",
+      "preflight_checks": [
+        {
+          "detail": "not configured",
+          "fingerprint": null,
+          "name": "dicomweb",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "not applicable",
+      "resource": "Institutional DICOMweb/PACS authorization",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [],
+      "status": "not_performed",
+      "version_or_digest": null
+    },
+    {
+      "license_or_terms": "requires real trained reviewers outside Codex",
+      "preflight_checks": [
+        {
+          "detail": "configured reviewers: 0",
+          "fingerprint": null,
+          "name": "blinded_reviewers",
+          "required": true,
+          "status": "missing"
+        }
+      ],
+      "redistribution": "reviewer identity keys must remain private",
+      "resource": "Independent blinded reviewers and adjudicator",
+      "retrieved_or_checked_utc_date": "2026-06-20",
+      "source_urls": [],
+      "status": "missing",
+      "version_or_digest": null
+    }
+  ],
+  "final_status": "PARTIALLY COMPLETE \u2014 EXTERNAL BLOCKERS REMAIN",
+  "generated_at_utc": "2026-06-20T22:24:16.706012+00:00",
+  "release": "0.7.2",
+  "schema_version": "1.0",
+  "software_inputs": [
+    {
+      "resource": "User-supplied v0.7.1 Codex handoff ZIP",
+      "sha256": "1af0ccdf338527691daa97f372bebcaa07e1dd6223f47392ae962fcab354654a",
+      "source": "user-supplied local archive",
+      "status": "verified"
+    },
+    {
+      "resource": "Original handoff manifests",
+      "source": "HANDOFF_SHA256SUMS.txt and artifacts/SHA256SUMS-v0.7.1.txt",
+      "status": "verified"
+    }
+  ]
+}

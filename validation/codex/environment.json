@@ -1,0 +1,60 @@
+{
+  "cpu": {
+    "cim": {
+      "MaxClockSpeed": 3201,
+      "Name": "AMD Ryzen 7 7735HS with Radeon Graphics        ",
+      "NumberOfCores": 8,
+      "NumberOfLogicalProcessors": 16
+    },
+    "logical_cpu_count": 16,
+    "processor": "AMD64 Family 25 Model 68 Stepping 1, AuthenticAMD"
+  },
+  "dependencies": {
+    "freeze_sha256": "187f3322d206620f5a913f33ef2a5796c7d22d8333dcd3ac6f7ea9aa44d441fe",
+    "pip_list_count": 117
+  },
+  "final_status": "PARTIALLY COMPLETE \u2014 EXTERNAL BLOCKERS REMAIN",
+  "generated_at_utc": "2026-06-20T22:24:16.571564+00:00",
+  "git": {
+    "import_commit": "ca844d01db3360386467b00f65742494b564648a",
+    "validated_source_commit": "a37f7e402c03513f717e7baecfe1d6f63e85230a",
+    "validated_source_subject": "Prepare v0.7.2 portability release"
+  },
+  "memory": {
+    "available_physical_bytes": 14793633792,
+    "memory_load_percent": 50,
+    "total_physical_bytes": 29793837056
+  },
+  "os": {
+    "cim": {
+      "BuildNumber": "26200",
+      "Caption": "Microsoft Windows 11 Home",
+      "FreePhysicalMemory": 14410588,
+      "OSArchitecture": "64-bit",
+      "TotalVisibleMemorySize": 29095544,
+      "Version": "10.0.26200"
+    },
+    "platform": "Windows-10-10.0.26200-SP0",
+    "release": "10",
+    "system": "Windows",
+    "version": "10.0.26200"
+  },
+  "python": {
+    "architecture": "64bit",
+    "compiler": "MSC v.1938 64 bit (AMD64)",
+    "implementation": "CPython",
+    "version": "3.11.9"
+  },
+  "redaction": {
+    "absolute_workspace_paths": "omitted from public final records",
+    "secrets_or_phi": "not supplied and not present in final records"
+  },
+  "release": "0.7.2",
+  "schema_version": "1.0",
+  "storage": {
+    "filesystem_root": "C:\\",
+    "free_bytes": 5569888256,
+    "total_bytes": 511135707136,
+    "used_bytes": 505565818880
+  }
+}
