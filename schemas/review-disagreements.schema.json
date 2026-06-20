@@ -1,0 +1,222 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/review-disagreements.schema.json",
+  "title": "Human review disagreement and adjudication packet",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "generated_at",
+    "reviewer_a",
+    "reviewer_b",
+    "summary",
+    "items"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "reviewer_a": {
+      "type": "string",
+      "minLength": 1
+    },
+    "reviewer_b": {
+      "type": "string",
+      "minLength": 1
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "disagreement",
+        "unmatched_a",
+        "unmatched_b",
+        "items_requiring_adjudication"
+      ],
+      "properties": {
+        "disagreement": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_a": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "unmatched_b": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "items_requiring_adjudication": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "scope",
+          "target",
+          "frame_number",
+          "region",
+          "state",
+          "reviewer_a_decision",
+          "reviewer_b_decision"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "case",
+              "metadata",
+              "pixel",
+              "region"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "frame_number": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "region": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ]
+          },
+          "state": {
+            "enum": [
+              "disagreement",
+              "unmatched_a",
+              "unmatched_b"
+            ]
+          },
+          "reviewer_a_decision": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/decision"
+              }
+            ]
+          },
+          "reviewer_b_decision": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/$defs/decision"
+              }
+            ]
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "decision": {
+      "type": "object",
+      "required": [
+        "decision_id",
+        "case_id",
+        "reviewer",
+        "scope",
+        "target",
+        "status",
+        "comment",
+        "frame_number",
+        "region",
+        "created_at"
+      ],
+      "properties": {
+        "decision_id": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "case_id": {
+          "type": "string"
+        },
+        "reviewer": {
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "case",
+            "metadata",
+            "pixel",
+            "region"
+          ]
+        },
+        "target": {
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "confirmed_identifier",
+            "false_positive",
+            "acceptable_retention",
+            "needs_secondary_review",
+            "not_reviewed"
+          ]
+        },
+        "comment": {
+          "type": "string"
+        },
+        "frame_number": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        },
+        "region": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "minItems": 4,
+              "maxItems": 4,
+              "items": {
+                "type": "integer"
+              }
+            }
+          ]
+        },
+        "created_at": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    }
+  }
+}

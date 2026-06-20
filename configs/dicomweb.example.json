@@ -1,0 +1,16 @@
+{
+  "base_url": "https://dicomweb.example.org/dicom-web/",
+  "headers": {
+    "User-Agent": "dicom-privacy-auditor/0.7"
+  },
+  "bearer_token_env": "DICOMWEB_BEARER_TOKEN",
+  "verify_tls": true,
+  "timeout_seconds": 60,
+  "max_retries": 3,
+  "allow_insecure_http": false,
+  "allow_insecure_tls": false,
+  "allow_literal_secret_headers": false,
+  "include_error_body": false,
+  "max_response_bytes": 2147483648,
+  "max_request_bytes": 2147483648
+}

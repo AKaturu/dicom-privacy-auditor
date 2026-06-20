@@ -1,0 +1,103 @@
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[dev,analysis,adapters,standards]'
+      - run: python scripts/check_action_pins.py
+      - run: python scripts/check_workflow_integrity.py .
+      - run: python scripts/check_schema_integrity.py .
+      - run: python scripts/check_dependency_locks.py .
+      - run: python -m pip check
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy
+      - run: python -m compileall -q src scripts tests
+      - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
+
+  benchmark-smoke:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install -e '.[dev,analysis,adapters,standards]'
+      - run: dicom-privacy-benchmark all /tmp/noop --pipeline noop --cases-per-stratum 1 --clean-controls 2 --overwrite
+      - run: dicom-privacy-benchmark all /tmp/baseline --pipeline baseline --cases-per-stratum 1 --clean-controls 2 --overwrite
+      - name: Verify control expectations
+        run: |
+          python - <<'PY'
+          import json
+          noop = json.load(open('/tmp/noop/evaluation-noop/evaluation.json'))
+          baseline = json.load(open('/tmp/baseline/evaluation-baseline/evaluation.json'))
+          assert noop['summary']['residual_injections'] == 10
+          assert noop['summary']['auditor_detected_residuals'] == 10
+          assert baseline['summary']['removed_injections'] == 10
+          assert baseline['summary']['basic_valid_outputs'] == 12
+          PY
+
+  distribution-guard:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e '.[dev,packaging,standards]'
+      - run: python scripts/build_release_distributions.py . --output dist --clean
+      - run: python scripts/check_distribution_contents.py . dist
+
+  locked-runtime:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip build
+      - run: python -m build --wheel --no-isolation --outdir /tmp/dpa-wheel
+      - run: "pip install --require-hashes --only-binary=:all: -r requirements/locks/cp313-linux-x86_64-runtime.txt"
+      - run: pip install --no-deps /tmp/dpa-wheel/*.whl
+      - run: dicom-privacy --version
+      - run: dicom-privacy-demo /tmp/dpa-demo --cases-per-stratum 1 --clean-controls 1 --overwrite --no-plots
+
+  reproducible-distributions:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.13"
+      - run: python -m pip install --upgrade pip build
+      - run: python scripts/verify_reproducible_build.py .

@@ -1,0 +1,10 @@
+services:
+  auditor:
+    build: .
+    ports:
+      - "8501:8501"
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true

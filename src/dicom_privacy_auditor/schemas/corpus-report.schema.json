@@ -1,0 +1,105 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/corpus-report.schema.json",
+  "title": "Corpus consistency report",
+  "type": "object",
+  "required": [
+    "source",
+    "candidate",
+    "pairing",
+    "pairs",
+    "source_only",
+    "candidate_only",
+    "findings",
+    "metrics"
+  ],
+  "properties": {
+    "source": {
+      "type": "string"
+    },
+    "candidate": {
+      "type": "string"
+    },
+    "pairing": {
+      "enum": [
+        "relative_path",
+        "mapping_csv"
+      ]
+    },
+    "pairs": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "source_only": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "candidate_only": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "code",
+          "severity",
+          "scope",
+          "message",
+          "count",
+          "examples"
+        ],
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "severity": {
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "critical"
+            ]
+          },
+          "scope": {
+            "type": "string"
+          },
+          "source_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "candidate_key": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "examples": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "integer"
+      }
+    }
+  },
+  "additionalProperties": false
+}

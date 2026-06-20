@@ -1,0 +1,14 @@
+{
+  "name": "example-tool-1.0.0",
+  "command": [
+    "python",
+    "my_wrapper.py",
+    "--input",
+    "{input}",
+    "--output",
+    "{output}"
+  ],
+  "output_name_mode": "preserve",
+  "timeout_seconds": 120,
+  "notes": "Freeze the real tool version, configuration file, and wrapper commit before final analysis."
+}

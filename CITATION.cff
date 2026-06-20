@@ -1,0 +1,17 @@
+cff-version: 1.2.0
+message: "If you use this software, cite the tagged release and commit hash."
+title: "DICOM Privacy Auditor"
+type: software
+authors:
+  - family-names: Katuru
+    given-names: Krishna
+version: 0.7.1
+date-released: 2026-06-20
+license: MIT
+repository-code: "https://github.com/krishna2006sai/dicom-privacy-auditor"
+keywords:
+  - DICOM
+  - radiology
+  - privacy
+  - de-identification
+  - imaging informatics

@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/midi-campaign.schema.json",
+  "title": "MIDI-B live campaign definition",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "tools"
+  ],
+  "properties": {
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "name"
+        ],
+        "properties": {
+          "name": {
+            "enum": [
+              "noop",
+              "baseline",
+              "orthanc",
+              "rsna-anonymizer",
+              "rsna-ctp",
+              "directory"
+            ]
+          },
+          "config": {
+            "type": "object"
+          },
+          "official_validator_command": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "minItems": 1
+          },
+          "official_validator_timeout_seconds": {
+            "type": "number",
+            "exclusiveMinimum": 0,
+            "default": 3600
+          }
+        }
+      }
+    }
+  }
+}

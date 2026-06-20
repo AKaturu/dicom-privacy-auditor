@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/iod-registry.schema.json",
+  "title": "User-local IOD registry",
+  "type": "object",
+  "required": [
+    "format",
+    "edition",
+    "source_sha256",
+    "sop_classes"
+  ],
+  "properties": {
+    "format": {
+      "const": "dicom-privacy-iod-registry-v1"
+    },
+    "edition": {
+      "type": "string"
+    },
+    "source_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "source_type": {
+      "type": "string"
+    },
+    "rights_notice": {
+      "type": "string"
+    },
+    "sop_classes": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "required": [
+          "attributes"
+        ],
+        "properties": {
+          "name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ciod_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "ciod_name": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "attributes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": [
+                "module_id",
+                "module_usage",
+                "path"
+              ],
+              "properties": {
+                "module_id": {
+                  "type": "string"
+                },
+                "module_usage": {
+                  "type": "string"
+                },
+                "conditional_statement": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "path": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[0-9A-F]{8}$"
+                  }
+                },
+                "type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              },
+              "additionalProperties": false
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

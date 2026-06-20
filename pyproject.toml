@@ -1,0 +1,136 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dicom-privacy-auditor"
+version = "0.7.1"
+description = "A reproducible DICOM privacy auditor and synthetic de-identification benchmark."
+readme = "README.md"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [{name = "Krishna Katuru"}]
+keywords = ["DICOM", "radiology", "privacy", "de-identification", "benchmark"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Healthcare Industry",
+  "Intended Audience :: Science/Research",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Programming Language :: Python :: 3.13",
+  "Topic :: Scientific/Engineering :: Medical Science Apps.",
+]
+dependencies = [
+  "numpy>=1.26,<3.0",
+  "Pillow>=10.0,<13.0",
+  "pydicom>=3.0,<4.0",
+  "requests>=2.33,<3.0",
+  "jsonschema>=4.23,<5.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0,<9.0",
+  "pytest-cov>=5.0,<7.0",
+  "ruff>=0.6,<1.0",
+  "mypy>=1.11,<3.0",
+  "types-requests>=2.32,<3.0",
+  "bandit>=1.8,<2.0",
+  "hypothesis>=6.100,<7.0",
+  "twine>=5.1,<7.0",
+  "build>=1.2,<2.0",
+  "wheel>=0.44,<1.0",
+  "packaging>=24,<27",
+  "PyYAML>=6.0,<7.0",
+]
+packaging = [
+  "build>=1.2,<2.0",
+  "wheel>=0.44,<1.0",
+  "pyinstaller>=6.20,<7.0",
+]
+native = [
+  "pyinstaller>=6.20,<7.0",
+  "pynetdicom>=3.0,<4.0",
+  "python-docx>=1.1,<2.0",
+]
+ui = [
+  "streamlit>=1.36,<2.0",
+  "pandas>=2.1,<3.0",
+]
+adapters = [
+  "pynetdicom>=3.0,<4.0",
+]
+standards = [
+  "python-docx>=1.1,<2.0",
+]
+analysis = [
+  "matplotlib>=3.8,<4.0",
+  "pandas>=2.1,<3.0",
+]
+all = [
+  "streamlit>=1.36,<2.0",
+  "pandas>=2.1,<3.0",
+  "matplotlib>=3.8,<4.0",
+  "pynetdicom>=3.0,<4.0",
+  "python-docx>=1.1,<2.0",
+]
+
+[project.scripts]
+dicom-privacy-audit = "dicom_privacy_auditor.cli:main"
+dicom-privacy-compare = "dicom_privacy_auditor.compare_cli:main"
+dicom-privacy-baseline-deid = "dicom_privacy_auditor.deidentify_cli:main"
+dicom-privacy-benchmark = "dicom_privacy_auditor.benchmark_cli:main"
+dicom-privacy-ps315 = "dicom_privacy_auditor.ps315.cli:main"
+dicom-privacy-midi = "dicom_privacy_auditor.midi_cli:main"
+dicom-privacy-adapter = "dicom_privacy_auditor.adapter_cli:main"
+dicom-privacy = "dicom_privacy_auditor.launcher:main"
+dicom-privacy-desktop = "dicom_privacy_auditor.desktop:main"
+dicom-privacy-review = "dicom_privacy_auditor.review_cli:main"
+dicom-privacy-iod = "dicom_privacy_auditor.iod.cli:main"
+dicom-privacy-corpus = "dicom_privacy_auditor.corpus.cli:main"
+dicom-privacy-dicomweb = "dicom_privacy_auditor.dicomweb.cli:main"
+dicom-privacy-study = "dicom_privacy_auditor.study.cli:main"
+dicom-privacy-campaign = "dicom_privacy_auditor.campaign.cli:main"
+dicom-privacy-demo = "dicom_privacy_auditor.demo:main"
+dicom-privacy-report = "dicom_privacy_auditor.publication.cli:main"
+dicom-privacy-external = "dicom_privacy_auditor.external_validation:main"
+
+[project.urls]
+Repository = "https://github.com/krishna2006sai/dicom-privacy-auditor"
+Issues = "https://github.com/krishna2006sai/dicom-privacy-auditor/issues"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+dicom_privacy_auditor = ["schemas/*.json"]
+
+[tool.mypy]
+python_version = "3.10"
+files = ["src/dicom_privacy_auditor"]
+ignore_missing_imports = true
+warn_unused_configs = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+show_error_codes = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q --strict-markers"
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+ignore = ["E501"]
+
+
+[tool.coverage.run]
+omit = [
+  "src/dicom_privacy_auditor/review_app.py",
+  "src/dicom_privacy_auditor/desktop.py",
+]

@@ -1,0 +1,13 @@
+{
+  "midi_b_corpus": "/data/MIDI-B/dicom",
+  "midi_b_answer_key": "/data/MIDI-B/answer-key.sqlite",
+  "official_validator_command": "midi-validator",
+  "rsna_anonymizer_command": "rsna-anonymizer",
+  "rsna_ctp_command": "java",
+  "orthanc_http_url": "http://127.0.0.1:8042/system",
+  "orthanc_dimse_host": "127.0.0.1",
+  "orthanc_dimse_port": 4242,
+  "dicomweb_url": "https://pacs.example.org/dicom-web/studies?limit=1",
+  "reviewers": ["reviewer-a", "reviewer-b"],
+  "required_environment_variables": ["DICOMWEB_TOKEN"]
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": "1.0",
+  "release": "0.6.1",
+  "date": "2026-06-20",
+  "test_count": 73,
+  "coverage_percent": 83.12,
+  "coverage_gate_percent": 82,
+  "ruff": "passed",
+  "action_pin_guard": "passed",
+  "distribution_content_guard": "passed",
+  "hashed_runtime_lock": {
+    "platform": "CPython 3.13 / Linux x86_64",
+    "install": "passed",
+    "demo_smoke": "passed"
+  },
+  "reproducible_wheel": {
+    "status": "passed",
+    "sha256": "20c935ade49f2413d9fc5e6e106fd3b6c93c4943acc89a103a9411f73df59d07"
+  },
+  "native_linux_local_build": {
+    "status": "passed",
+    "platform": "Linux x86_64",
+    "python": "3.13.5",
+    "pyinstaller": "6.21.0",
+    "cli_sha256": "ae7bf104bd0da6c1be21d21be7a73b9ec0554e824d5379dbabeb26a354d4bd46",
+    "desktop_sha256": "a99a9b9430d26d5b261f0ad1040cb85e4645063fd37793c5fc8af0915c0731c4",
+    "archive_sha256": "ca65241d18df387a8b9945a35c1d6e353211346ab3d81d89fe1a8e6f50d54e3",
+    "smoke": [
+      "version",
+      "ps315-info",
+      "major-command-help",
+      "desktop-self-check",
+      "sample-audit",
+      "packaged-archive"
+    ]
+  },
+  "native_cross_platform_status": {
+    "windows_x64": "not executed locally; GitHub native runner required",
+    "macos_arm64": "not executed locally; GitHub native runner required",
+    "macos_x64": "not executed locally; GitHub native runner required"
+  },
+  "scope": "Synthetic/local validation only; not clinical validation or a compliance certification."
+}

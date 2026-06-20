@@ -1,0 +1,273 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/review-export.schema.json",
+  "title": "Human review export",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "exported_at",
+    "database_sha256",
+    "session",
+    "summary",
+    "cases",
+    "decisions"
+  ],
+  "properties": {
+    "schema_version": {
+      "enum": [
+        "1.0",
+        "1.1"
+      ]
+    },
+    "exported_at": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "database_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "session": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "created_at",
+        "source_root",
+        "candidate_root",
+        "title",
+        "schema_version"
+      ],
+      "properties": {
+        "id": {
+          "const": 1
+        },
+        "created_at": {
+          "type": "string"
+        },
+        "source_root": {
+          "type": "string"
+        },
+        "candidate_root": {
+          "type": "string"
+        },
+        "title": {
+          "type": "string"
+        },
+        "schema_version": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    },
+    "summary": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "cases",
+        "case_statuses",
+        "decision_statuses",
+        "reviewers"
+      ],
+      "properties": {
+        "cases": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "case_statuses": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "decision_statuses": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "reviewers": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "source_path",
+          "candidate_path",
+          "study_uid",
+          "series_uid",
+          "source_sop_uid",
+          "candidate_sop_uid",
+          "modality",
+          "frame_count",
+          "status",
+          "assigned_reviewer",
+          "priority",
+          "updated_at"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "source_path": {
+            "type": "string"
+          },
+          "candidate_path": {
+            "type": "string"
+          },
+          "study_uid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "series_uid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "source_sop_uid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "candidate_sop_uid": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "modality": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "frame_count": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "assigned_reviewer": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "priority": {
+            "type": "integer"
+          },
+          "updated_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "decisions": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decision_id",
+          "case_id",
+          "reviewer",
+          "scope",
+          "target",
+          "status",
+          "comment",
+          "frame_number",
+          "region",
+          "created_at"
+        ],
+        "properties": {
+          "decision_id": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "case_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "reviewer": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scope": {
+            "enum": [
+              "case",
+              "metadata",
+              "pixel",
+              "region"
+            ]
+          },
+          "target": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "confirmed_identifier",
+              "false_positive",
+              "acceptable_retention",
+              "needs_secondary_review",
+              "not_reviewed"
+            ]
+          },
+          "comment": {
+            "type": "string"
+          },
+          "frame_number": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "region": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "array",
+                "minItems": 4,
+                "maxItems": 4,
+                "items": {
+                  "type": "integer"
+                }
+              }
+            ]
+          },
+          "created_at": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    }
+  }
+}

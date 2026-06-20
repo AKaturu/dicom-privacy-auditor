@@ -1,0 +1,16 @@
+{
+  "host": "127.0.0.1",
+  "port": 1045,
+  "called_ae_title": "ANONYMIZER",
+  "calling_ae_title": "DPAUDITOR",
+  "output_dir": "/absolute/path/to/dedicated/project/storage",
+  "project_model": "/absolute/path/to/ProjectModel.json",
+  "executable": "rsna-anonymizer",
+  "startup_seconds": 5,
+  "timeout_seconds": 120,
+  "poll_seconds": 0.5,
+  "stop_process_on_close": true,
+  "max_input_bytes": 2147483648,
+  "max_output_bytes": 2147483648,
+  "cleanup_output": true
+}

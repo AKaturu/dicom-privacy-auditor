@@ -1,0 +1,113 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dicom-privacy-auditor/ps315-evaluation.schema.json",
+  "title": "DICOM PS3.15 Pair Evaluation",
+  "type": "object",
+  "required": [
+    "standard",
+    "edition",
+    "table",
+    "selection",
+    "source",
+    "candidate",
+    "summary",
+    "operational_checks",
+    "results"
+  ],
+  "properties": {
+    "standard": {
+      "type": "string"
+    },
+    "edition": {
+      "type": "string"
+    },
+    "table": {
+      "type": "string"
+    },
+    "selection": {
+      "type": "object"
+    },
+    "source": {
+      "type": "string"
+    },
+    "candidate": {
+      "type": "string"
+    },
+    "summary": {
+      "type": "object"
+    },
+    "operational_checks": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "tag",
+          "keyword",
+          "rule_name",
+          "expected",
+          "observed",
+          "status",
+          "reason",
+          "manual_review"
+        ],
+        "properties": {
+          "path": {
+            "type": "string"
+          },
+          "tag": {
+            "type": "string"
+          },
+          "keyword": {
+            "type": "string"
+          },
+          "rule_name": {
+            "type": "string"
+          },
+          "expected": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "observed": {
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "pass",
+              "review",
+              "fail"
+            ]
+          },
+          "reason": {
+            "type": "string"
+          },
+          "manual_review": {
+            "type": "boolean"
+          },
+          "iod_context": {
+            "type": [
+              "object",
+              "null"
+            ]
+          }
+        },
+        "additionalProperties": false
+      }
+    },
+    "iod_summary": {
+      "type": [
+        "object",
+        "null"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

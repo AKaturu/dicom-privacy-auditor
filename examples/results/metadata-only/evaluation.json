@@ -1,0 +1,1617 @@
+{
+  "pipeline": "metadata-only",
+  "benchmark_name": "DICOM Privacy Auditor Synthetic Benchmark",
+  "summary": {
+    "cases": 60,
+    "injections": 50,
+    "removed_injections": 40,
+    "residual_injections": 10,
+    "removal_rate": 0.8,
+    "removal_rate_ci95": [
+      0.6696289406777459,
+      0.887562499842239
+    ],
+    "auditor_detected_residuals": 10,
+    "auditor_residual_sensitivity": 1.0,
+    "auditor_residual_sensitivity_ci95": [
+      0.7224672001371107,
+      0.9999999999999999
+    ],
+    "clean_controls": 10,
+    "false_positive_controls": 0,
+    "false_positive_control_rate": 0.0,
+    "false_positive_control_rate_ci95": [
+      0.0,
+      0.2775327998628892
+    ],
+    "readable_outputs": 60,
+    "basic_valid_outputs": 60,
+    "total_runtime_seconds": 0.12538217499991333,
+    "mean_runtime_seconds": 0.002089702916665222
+  },
+  "by_stratum": [
+    {
+      "stratum": "file_meta",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "filename",
+      "injections": 5,
+      "removed": 0,
+      "residual": 5,
+      "removal_rate": 0.0,
+      "removal_rate_ci95_low": 0.0,
+      "removal_rate_ci95_high": 0.43448246478317476,
+      "auditor_detected_residuals": 5,
+      "auditor_residual_sensitivity": 1.0
+    },
+    {
+      "stratum": "free_text",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "nested_sequence",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "pixel_annotation",
+      "injections": 5,
+      "removed": 0,
+      "residual": 5,
+      "removal_rate": 0.0,
+      "removal_rate_ci95_low": 0.0,
+      "removal_rate_ci95_high": 0.43448246478317476,
+      "auditor_detected_residuals": 5,
+      "auditor_residual_sensitivity": 1.0
+    },
+    {
+      "stratum": "preamble",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "private_attribute",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "standard_metadata",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "temporal",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "uid",
+      "injections": 5,
+      "removed": 5,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.5655175352168251,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    }
+  ],
+  "cases": [
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00001",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0031011149999358167,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00001",
+          "injection_id": "case-00001:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00002",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002160720000006222,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00002",
+          "injection_id": "case-00002:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00003",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0023351749999847016,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00003",
+          "injection_id": "case-00003:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00004",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021935669999493257,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00004",
+          "injection_id": "case-00004:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 0.9999999403953552,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00005",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019500820000075691,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00005",
+          "injection_id": "case-00005:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00006",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002219263000029059,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00006",
+          "injection_id": "case-00006:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00007",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019416820000515145,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00007",
+          "injection_id": "case-00007:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00008",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018788999999515,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00008",
+          "injection_id": "case-00008:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00009",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0036382900000262453,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00009",
+          "injection_id": "case-00009:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "FILENAME_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00010",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0022938700000167955,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00010",
+          "injection_id": "case-00010:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00011",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020841360000076747,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00011",
+          "injection_id": "case-00011:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00012",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021125839999740492,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00012",
+          "injection_id": "case-00012:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00013",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021729180000420456,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00013",
+          "injection_id": "case-00013:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00014",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020685079999793743,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00014",
+          "injection_id": "case-00014:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00015",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002039167000020825,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00015",
+          "injection_id": "case-00015:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00016",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002204045999974369,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00016",
+          "injection_id": "case-00016:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00017",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021837780000169005,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00017",
+          "injection_id": "case-00017:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00018",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002020293999976275,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00018",
+          "injection_id": "case-00018:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00019",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020724019999533994,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00019",
+          "injection_id": "case-00019:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 1.0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00020",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020655399999895963,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00020",
+          "injection_id": "case-00020:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "FILENAME_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00021",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0022272940000220842,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00021",
+          "injection_id": "case-00021:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00022",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021385169999348363,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00022",
+          "injection_id": "case-00022:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00023",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002098480000086056,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00023",
+          "injection_id": "case-00023:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00024",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018125770000096963,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00024",
+          "injection_id": "case-00024:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00025",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020745079999642257,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00025",
+          "injection_id": "case-00025:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00026",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002316464000045926,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00026",
+          "injection_id": "case-00026:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00027",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001948321999975633,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00027",
+          "injection_id": "case-00027:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00028",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020580419999305377,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00028",
+          "injection_id": "case-00028:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00029",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001965612999924815,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00029",
+          "injection_id": "case-00029:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00030",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001978442999984509,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00030",
+          "injection_id": "case-00030:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 1.0000001192092896,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00031",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019122729999025978,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00031",
+          "injection_id": "case-00031:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00032",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021109809999870777,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00032",
+          "injection_id": "case-00032:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "FREE_TEXT_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00033",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019791630001009253,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00033",
+          "injection_id": "case-00033:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00034",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001931721000005382,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00034",
+          "injection_id": "case-00034:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00035",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019573929999978645,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00035",
+          "injection_id": "case-00035:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00036",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019069869999839284,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00036",
+          "injection_id": "case-00036:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00037",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019325270000081218,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00037",
+          "injection_id": "case-00037:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00038",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018094110000674846,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00038",
+          "injection_id": "case-00038:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00039",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019339069999659841,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00039",
+          "injection_id": "case-00039:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00040",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018582010000045557,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00040",
+          "injection_id": "case-00040:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "FILENAME_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00041",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018771470000729096,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00041",
+          "injection_id": "case-00041:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 1.0000001192092896,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00042",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018909579999899506,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00042",
+          "injection_id": "case-00042:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 1.0,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00043",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002063763000023755,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00043",
+          "injection_id": "case-00043:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00044",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020615110000790082,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00044",
+          "injection_id": "case-00044:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00045",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0021785779999845545,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00045",
+          "injection_id": "case-00045:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00046",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018635210000184088,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00046",
+          "injection_id": "case-00046:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "FILENAME_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00047",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018858900000395806,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00047",
+          "injection_id": "case-00047:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "FILENAME_REVIEW"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00048",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001812772999983281,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00048",
+          "injection_id": "case-00048:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00049",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0020127899999806687,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00049",
+          "injection_id": "case-00049:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "case-00050",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0018468509999820526,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "metadata-only",
+          "case_id": "case-00050",
+          "injection_id": "case-00050:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00001",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019208240000807564,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00002",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019891499999857842,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00003",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.001956357000040043,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00004",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019140029999107355,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00005",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0019782030000214945,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00006",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002128360000028806,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00007",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0024395499999627646,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00008",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002562424999950963,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00009",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.0022123420000070837,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "metadata-only",
+      "case_id": "control-00010",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.002100317999975232,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": []
+    }
+  ]
+}

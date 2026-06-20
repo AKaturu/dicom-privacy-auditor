@@ -1,0 +1,100 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/external-validation-config.schema.json",
+  "type": "object",
+  "properties": {
+    "midi_b_corpus": {
+      "type": "string",
+      "minLength": 1
+    },
+    "midi_b_answer_key": {
+      "type": "string",
+      "minLength": 1
+    },
+    "official_validator_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rsna_anonymizer_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "rsna_ctp_command": {
+      "type": "string",
+      "minLength": 1
+    },
+    "orthanc_http_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "orthanc_dimse_host": {
+      "type": "string",
+      "minLength": 1
+    },
+    "orthanc_dimse_port": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535
+    },
+    "dicomweb_url": {
+      "type": "string",
+      "format": "uri"
+    },
+    "http_auth_environment_variable": {
+      "type": "string",
+      "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+    },
+    "http_timeout_seconds": {
+      "type": "number",
+      "exclusiveMinimum": 0,
+      "maximum": 120
+    },
+    "reviewers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "required_environment_variables": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+      },
+      "uniqueItems": true
+    },
+    "optional_checks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "enum": [
+          "midi_b_corpus",
+          "midi_b_answer_key",
+          "official_validator",
+          "rsna_anonymizer",
+          "rsna_ctp",
+          "orthanc_http",
+          "orthanc_dimse",
+          "dicomweb",
+          "blinded_reviewers",
+          "credentials"
+        ]
+      },
+      "uniqueItems": true
+    },
+    "fingerprint_resources": {
+      "type": "boolean"
+    },
+    "fingerprint_mode": {
+      "type": "string",
+      "enum": [
+        "none",
+        "inventory",
+        "content"
+      ]
+    }
+  },
+  "additionalProperties": false
+}

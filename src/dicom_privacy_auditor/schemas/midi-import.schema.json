@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dicom-privacy-auditor/midi-import.schema.json",
+  "title": "MIDI-B Import Manifest",
+  "type": "object",
+  "required": ["schema_version", "dataset_name", "source_answer_key_sha256", "source_answer_key_name", "dicom_root", "action_count", "action_counts", "category_counts", "tables", "actions_file", "unresolved_source_paths"],
+  "properties": {
+    "schema_version": {"type": "string"},
+    "dataset_name": {"type": "string"},
+    "source_answer_key_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "source_answer_key_name": {"type": "string"},
+    "dicom_root": {"type": "string"},
+    "action_count": {"type": "integer", "minimum": 0},
+    "action_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "category_counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "tables": {"type": "array", "items": {"type": "object"}},
+    "patient_mapping": {"type": ["string", "null"]},
+    "uid_mapping": {"type": ["string", "null"]},
+    "actions_file": {"type": "string"},
+    "unresolved_source_paths": {"type": "integer", "minimum": 0}
+  },
+  "additionalProperties": false
+}

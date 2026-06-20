@@ -1,0 +1,17 @@
+{
+  "base_url": "https://orthanc.example.org",
+  "username_env": "DPA_ORTHANC_USERNAME",
+  "password_env": "DPA_ORTHANC_PASSWORD",
+  "verify_tls": true,
+  "allow_insecure_http": false,
+  "allow_insecure_tls": false,
+  "allow_literal_credentials": false,
+  "include_error_body": false,
+  "max_request_bytes": 2147483648,
+  "max_response_bytes": 2147483648,
+  "dicom_version": "2023b",
+  "keep_private_tags": false,
+  "cleanup_uploaded": true,
+  "cleanup_already_stored": false,
+  "timeout_seconds": 120
+}

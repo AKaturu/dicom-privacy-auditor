@@ -1,0 +1,102 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/run-manifest.schema.json",
+  "title": "Benchmark run manifest",
+  "type": "object",
+  "required": [
+    "pipeline_name",
+    "pipeline_kind",
+    "benchmark_manifest",
+    "cases",
+    "metadata"
+  ],
+  "properties": {
+    "pipeline_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "pipeline_kind": {
+      "enum": [
+        "builtin",
+        "external",
+        "adapter"
+      ]
+    },
+    "benchmark_manifest": {
+      "type": "string",
+      "minLength": 1
+    },
+    "cases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "case_id",
+          "input_relative_path",
+          "output_relative_path",
+          "status",
+          "runtime_seconds",
+          "error",
+          "output_sha256",
+          "validation",
+          "pipeline_stats"
+        ],
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$"
+          },
+          "input_relative_path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+          },
+          "output_relative_path": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$))(?!.*\\\\).+$"
+          },
+          "status": {
+            "type": "string",
+            "minLength": 1
+          },
+          "runtime_seconds": {
+            "type": "number",
+            "minimum": 0
+          },
+          "error": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "output_sha256": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[0-9a-fA-F]{64}$"
+          },
+          "validation": {
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "pipeline_stats": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "metadata": {
+      "type": "object"
+    }
+  },
+  "additionalProperties": false
+}

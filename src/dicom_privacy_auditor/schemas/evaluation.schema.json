@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dicom-privacy-auditor/evaluation.schema.json",
+  "title": "DICOM Privacy Auditor Evaluation",
+  "type": "object",
+  "required": ["pipeline", "benchmark_name", "summary", "by_stratum", "cases"],
+  "properties": {
+    "pipeline": {"type": "string"},
+    "benchmark_name": {"type": "string"},
+    "summary": {"type": "object"},
+    "by_stratum": {"type": "array", "items": {"type": "object"}},
+    "cases": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": false
+}

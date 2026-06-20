@@ -1,0 +1,300 @@
+name: build native executables
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    permissions:
+      contents: read
+      id-token: write
+      attestations: write
+      artifact-metadata: write
+    name: ${{ matrix.label }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            label: Linux x64
+          - os: windows-2025
+            label: Windows x64
+          - os: macos-15
+            label: macOS Apple Silicon
+          - os: macos-15-intel
+            label: macOS Intel
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+
+      - uses: actions/setup-python@8d9ed9ac5c53483de85588cdf95a591a75ab9f55  # v5.5.0
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install build dependencies
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e '.[dev,analysis,packaging,adapters,standards]' cyclonedx-bom
+
+      - name: Run release-quality checks
+        shell: bash
+        run: |
+          python scripts/check_action_pins.py
+          python scripts/check_workflow_integrity.py .
+          python scripts/check_schema_integrity.py .
+          python scripts/check_dependency_locks.py .
+          python -m pip check
+          ruff check .
+          ruff format --check .
+          mypy
+          bandit -q -r src scripts -ll
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
+
+      - name: Create isolated native build environment
+        shell: bash
+        run: |
+          python -m venv .native-venv
+          if [ "${RUNNER_OS}" = "Windows" ]; then
+            native_python="$PWD/.native-venv/Scripts/python.exe"
+          else
+            native_python="$PWD/.native-venv/bin/python"
+          fi
+          "$native_python" -m pip install --upgrade pip
+          "$native_python" -m pip install -e '.[native]'
+          echo "NATIVE_PYTHON=$native_python" >> "$GITHUB_ENV"
+
+      - name: Build native applications
+        shell: bash
+        run: '"$NATIVE_PYTHON" scripts/build_executables.py --output dist/native'
+
+      - name: Import Apple signing certificate
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE_P12: ${{ secrets.APPLE_CERTIFICATE_P12 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        shell: bash
+        run: |
+          if [ -n "$APPLE_CERTIFICATE_P12" ] && [ -n "$APPLE_CERTIFICATE_PASSWORD" ] && [ -n "$APPLE_SIGNING_IDENTITY" ]; then
+            echo "$APPLE_CERTIFICATE_P12" | base64 --decode > certificate.p12
+            security create-keychain -p temporary build.keychain
+            security import certificate.p12 -k build.keychain -P "$APPLE_CERTIFICATE_PASSWORD" -T /usr/bin/codesign
+            security list-keychains -d user -s build.keychain
+            security unlock-keychain -p temporary build.keychain
+            security set-key-partition-list -S apple-tool:,apple: -s -k temporary build.keychain
+            echo "DPA_MAC_CERT_IMPORTED=true" >> "$GITHUB_ENV"
+          else
+            echo "DPA_MAC_CERT_IMPORTED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sign macOS applications
+        if: runner.os == 'macOS'
+        env:
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+        shell: bash
+        run: |
+          if [ "${DPA_MAC_CERT_IMPORTED:-false}" = "true" ]; then
+            codesign --force --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" dist/native/DICOMPrivacyAuditor-CLI
+            codesign --force --deep --options runtime --timestamp --sign "$APPLE_SIGNING_IDENTITY" dist/native/DICOMPrivacyAuditor.app
+            codesign --verify --strict --verbose=2 dist/native/DICOMPrivacyAuditor-CLI
+            codesign --verify --deep --strict --verbose=2 dist/native/DICOMPrivacyAuditor.app
+            echo "DPA_MAC_SIGNED=true" >> "$GITHUB_ENV"
+          else
+            codesign --force --sign - dist/native/DICOMPrivacyAuditor-CLI
+            codesign --force --deep --sign - dist/native/DICOMPrivacyAuditor.app
+            codesign --verify --strict --verbose=2 dist/native/DICOMPrivacyAuditor-CLI
+            codesign --verify --deep --strict --verbose=2 dist/native/DICOMPrivacyAuditor.app
+            echo "DPA_MAC_SIGNED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Notarize macOS applications
+        if: runner.os == 'macOS'
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_APP_PASSWORD: ${{ secrets.APPLE_APP_PASSWORD }}
+        shell: bash
+        run: |
+          if [ "${DPA_MAC_SIGNED:-false}" = "true" ] && [ -n "$APPLE_ID" ] && [ -n "$APPLE_TEAM_ID" ] && [ -n "$APPLE_APP_PASSWORD" ]; then
+            mkdir -p dist/native/notarization-payload
+            cp -R dist/native/DICOMPrivacyAuditor.app dist/native/notarization-payload/
+            cp dist/native/DICOMPrivacyAuditor-CLI dist/native/notarization-payload/
+            ditto -c -k --keepParent dist/native/notarization-payload dist/native/DICOMPrivacyAuditor-notarization.zip
+            xcrun notarytool submit dist/native/DICOMPrivacyAuditor-notarization.zip --apple-id "$APPLE_ID" --team-id "$APPLE_TEAM_ID" --password "$APPLE_APP_PASSWORD" --wait
+            xcrun stapler staple dist/native/DICOMPrivacyAuditor.app
+            xcrun stapler validate dist/native/DICOMPrivacyAuditor.app
+            rm -rf dist/native/notarization-payload dist/native/DICOMPrivacyAuditor-notarization.zip
+            echo "DPA_MAC_NOTARIZED=true" >> "$GITHUB_ENV"
+          else
+            echo "DPA_MAC_NOTARIZED=false" >> "$GITHUB_ENV"
+          fi
+
+      - name: Sign Windows executables
+        if: runner.os == 'Windows'
+        env:
+          WINDOWS_CERTIFICATE_PFX: ${{ secrets.WINDOWS_CERTIFICATE_PFX }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        shell: pwsh
+        run: |
+          if ($env:WINDOWS_CERTIFICATE_PFX -and $env:WINDOWS_CERTIFICATE_PASSWORD) {
+            [IO.File]::WriteAllBytes('certificate.pfx', [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_PFX))
+            $files = Get-ChildItem dist/native -Filter *.exe -Recurse
+            foreach ($file in $files) {
+              & signtool sign /fd SHA256 /tr https://timestamp.digicert.com /td SHA256 /f certificate.pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD $file.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Signing failed: $($file.FullName)" }
+              & signtool verify /pa /all $file.FullName
+              if ($LASTEXITCODE -ne 0) { throw "Signature verification failed: $($file.FullName)" }
+            }
+            "DPA_WINDOWS_SIGNED=true" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          } else {
+            "DPA_WINDOWS_SIGNED=false" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          }
+
+      - name: Smoke-test CLI on Unix
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          dist/native/DICOMPrivacyAuditor-CLI version
+          dist/native/DICOMPrivacyAuditor-CLI ps315 info --json > dist/ps315-smoke.json
+          dist/native/DICOMPrivacyAuditor-CLI midi --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI adapter --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI review --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI iod --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI corpus --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI dicomweb --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI study --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI campaign --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI external --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI demo --help > /dev/null
+          dist/native/DICOMPrivacyAuditor-CLI report --help > /dev/null
+          dist/native/DICOMPrivacyAuditor --self-check
+          dist/native/DICOMPrivacyAuditor-CLI audit sample_data --json dist/native-smoke.json
+          test -s dist/native-smoke.json
+          test -s dist/ps315-smoke.json
+
+      - name: Smoke-test CLI on Windows
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & dist/native/DICOMPrivacyAuditor-CLI.exe version
+          & dist/native/DICOMPrivacyAuditor-CLI.exe ps315 info --json | Out-File -Encoding utf8 dist/ps315-smoke.json
+          & dist/native/DICOMPrivacyAuditor-CLI.exe midi --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe adapter --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe review --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe iod --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe corpus --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe dicomweb --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe study --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe campaign --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe external --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe demo --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor-CLI.exe report --help | Out-Null
+          & dist/native/DICOMPrivacyAuditor.exe --self-check
+          if ($LASTEXITCODE -ne 0) { throw "Desktop self-check failed" }
+          & dist/native/DICOMPrivacyAuditor-CLI.exe audit sample_data --json dist/native-smoke.json
+          if (-not (Test-Path dist/native-smoke.json)) { throw "Smoke-test report was not created" }
+          if (-not (Test-Path dist/ps315-smoke.json)) { throw "PS3.15 smoke report was not created" }
+
+      - name: Package release archive
+        shell: bash
+        run: python scripts/package_native_release.py --dist dist/native --release-dir dist/release
+
+      - name: Record platform signing status
+        shell: bash
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          from pathlib import Path
+          payload = {
+              "runner_os": os.environ.get("RUNNER_OS"),
+              "runner_arch": os.environ.get("RUNNER_ARCH"),
+              "windows_authenticode": os.environ.get("DPA_WINDOWS_SIGNED", "not-applicable"),
+              "macos_developer_id": os.environ.get("DPA_MAC_SIGNED", "not-applicable"),
+              "macos_notarized": os.environ.get("DPA_MAC_NOTARIZED", "not-applicable"),
+          }
+          Path("dist/release").mkdir(parents=True, exist_ok=True)
+          Path(f"dist/release/SIGNATURE-STATUS-{payload['runner_os']}-{payload['runner_arch']}.json").write_text(
+              json.dumps(payload, indent=2) + "\n", encoding="utf-8"
+          )
+          PY
+
+      - name: Generate platform checksums and SBOM
+        shell: bash
+        run: |
+          mkdir -p dist/release
+          find dist/release -maxdepth 1 -type f \( -name '*.zip' -o -name '*.tar.gz' \) -print0 | sort -z | xargs -0 sha256sum > dist/release/SHA256SUMS-${{ runner.os }}-${{ runner.arch }}.txt
+          cyclonedx-py environment "$NATIVE_PYTHON" --pyproject pyproject.toml --output-reproducible --output-format JSON --output-file dist/release/SBOM-native-runtime-${{ runner.os }}-${{ runner.arch }}.cdx.json
+
+      - name: Attest platform archive provenance
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26  # v4.1.0
+        with:
+          subject-checksums: dist/release/SHA256SUMS-${{ runner.os }}-${{ runner.arch }}.txt
+
+      - name: Attest platform archive SBOM
+        if: github.event.repository.visibility == 'public'
+        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26  # v4.1.0
+        with:
+          subject-checksums: dist/release/SHA256SUMS-${{ runner.os }}-${{ runner.arch }}.txt
+          sbom-path: dist/release/SBOM-native-runtime-${{ runner.os }}-${{ runner.arch }}.cdx.json
+
+      - name: Remove imported signing material
+        if: always()
+        shell: bash
+        run: |
+          rm -f certificate.p12 certificate.pfx
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            security delete-keychain build.keychain 2>/dev/null || true
+          fi
+
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4.6.2
+        with:
+          name: native-${{ runner.os }}-${{ runner.arch }}
+          path: dist/release/*
+          if-no-files-found: error
+          retention-days: 14
+
+  draft-release:
+    permissions:
+      contents: write
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
+        with:
+          path: release
+          merge-multiple: true
+
+      - name: Create combined checksum file
+        shell: bash
+        run: |
+          cd release
+          sha256sum *.zip *.tar.gz 2>/dev/null | sort > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create draft GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${GITHUB_REF_NAME}" release/* \
+            --draft \
+            --verify-tag \
+            --title "DICOM Privacy Auditor ${GITHUB_REF_NAME}" \
+            --notes "Native research-prototype builds for Windows, Linux, macOS Apple Silicon, and macOS Intel. Verify SHA-256 checksums, provenance attestations, SBOMs, and the per-platform SIGNATURE-STATUS files before running. Signing and notarization occur only when owner-controlled credentials are configured. These artifacts are not approved for clinical deployment."

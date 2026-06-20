@@ -1,0 +1,16 @@
+{
+  "input_dir": "/absolute/path/to/ctp/pipeline/incoming",
+  "output_dir": "/absolute/path/to/ctp/pipeline/outgoing",
+  "start_command": [
+    "java",
+    "-jar",
+    "/absolute/path/to/CTP/Runner.jar"
+  ],
+  "working_directory": "/absolute/path/to/CTP",
+  "startup_seconds": 5,
+  "timeout_seconds": 120,
+  "stop_process_on_close": true,
+  "max_input_bytes": 2147483648,
+  "max_output_bytes": 2147483648,
+  "cleanup_output": true
+}

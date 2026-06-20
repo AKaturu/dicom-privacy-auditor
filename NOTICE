@@ -1,0 +1,7 @@
+DICOM Privacy Auditor — third-party notices
+
+DICOM® is the registered trademark of the National Electrical Manufacturers Association for its standards publications relating to digital communications of medical information, all rights reserved.
+
+DICOM Privacy Auditor is an independent open-source project and is not affiliated with, sponsored by, endorsed by, or certified by NEMA or the DICOM Standards Committee.
+
+The project does not redistribute the DICOM Standard, the official Part 15 DOCX, or complete extracted standards tables. The MIT License applies only to original project code and documentation and does not grant rights in the DICOM Standard, NEMA trademarks, third-party datasets, third-party software, or user-generated standards caches.

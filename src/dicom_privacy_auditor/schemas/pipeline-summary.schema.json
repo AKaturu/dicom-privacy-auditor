@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Pipeline summary map",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "cases",
+      "injections",
+      "removed_injections",
+      "residual_injections",
+      "removal_rate",
+      "removal_rate_ci95",
+      "auditor_detected_residuals",
+      "auditor_residual_sensitivity",
+      "auditor_residual_sensitivity_ci95",
+      "clean_controls",
+      "false_positive_controls",
+      "false_positive_control_rate",
+      "false_positive_control_rate_ci95",
+      "readable_outputs",
+      "basic_valid_outputs",
+      "total_runtime_seconds",
+      "mean_runtime_seconds"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "cases": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "injections": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "removed_injections": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "residual_injections": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "removal_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "removal_rate_ci95": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "auditor_detected_residuals": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "auditor_residual_sensitivity": {
+        "type": [
+          "number",
+          "null"
+        ],
+        "minimum": 0,
+        "maximum": 1
+      },
+      "auditor_residual_sensitivity_ci95": {
+        "oneOf": [
+          {
+            "type": "null"
+          },
+          {
+            "type": "array",
+            "minItems": 2,
+            "maxItems": 2,
+            "items": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        ]
+      },
+      "clean_controls": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "false_positive_controls": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "false_positive_control_rate": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      },
+      "false_positive_control_rate_ci95": {
+        "type": "array",
+        "minItems": 2,
+        "maxItems": 2,
+        "items": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "readable_outputs": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "basic_valid_outputs": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "total_runtime_seconds": {
+        "type": "number",
+        "minimum": 0
+      },
+      "mean_runtime_seconds": {
+        "type": "number",
+        "minimum": 0
+      }
+    }
+  }
+}

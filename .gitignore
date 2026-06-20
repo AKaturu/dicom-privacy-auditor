@@ -1,0 +1,26 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+reports/
+workspaces/
+examples/demo_workspace/
+.streamlit/secrets.toml
+.DS_Store
+Thumbs.db
+# DICOM Standard source documents and locally generated complete rule tables
+vendor/part15*.docx
+part15*.docx
+src/dicom_privacy_auditor/data/ps315_*_table_e1_*.json
+ps315_*_table_e1_*.json
+.mypy_cache/
+.hypothesis/
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

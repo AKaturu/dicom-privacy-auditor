@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","title":"DICOM privacy audit report list","type":"array","items":{"type":"object","required":["source","readable","findings"]}}

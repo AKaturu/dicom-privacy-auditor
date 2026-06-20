@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dicom-privacy-auditor/midi-evaluation.schema.json",
+  "title": "MIDI-B Evaluation",
+  "type": "object",
+  "required": ["dataset_name", "summary", "by_action", "by_category", "results"],
+  "properties": {
+    "dataset_name": {"type": "string"},
+    "summary": {"type": "object"},
+    "by_action": {"type": "array", "items": {"type": "object"}},
+    "by_category": {"type": "array", "items": {"type": "object"}},
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["action_id", "action", "status", "reason", "source_present", "candidate_present"],
+        "properties": {
+          "action_id": {"type": "string"},
+          "action": {"type": "string"},
+          "category": {"type": ["string", "null"]},
+          "status": {"enum": ["pass", "fail", "unresolved", "error"]},
+          "reason": {"type": "string"},
+          "source_present": {"type": "boolean"},
+          "candidate_present": {"type": "boolean"},
+          "source_ref": {"type": ["string", "null"]},
+          "candidate_ref": {"type": ["string", "null"]}
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,15 @@
+{
+  "schema_version": "1.0",
+  "release": "0.6.2",
+  "date": "2026-06-20",
+  "status": "locally validated",
+  "tests": {"passed": 75, "coverage_percent": 83.08, "coverage_gate_percent": 82},
+  "checks": {
+    "ruff": "passed",
+    "distribution_policy": "passed",
+    "github_action_pins": "passed",
+    "wheel_and_sdist_build": "passed"
+  },
+  "scope": "MIDI-B campaign migration, preflight, sharding, checkpoint, and finalization hardening",
+  "external_validation_claimed": false
+}

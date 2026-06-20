@@ -1,0 +1,43 @@
+{
+  "tools": [
+    {
+      "name": "noop"
+    },
+    {
+      "name": "baseline",
+      "official_validator_timeout_seconds": 3600
+    },
+    {
+      "name": "orthanc",
+      "config": {
+        "base_url": "https://orthanc.example.org",
+        "username_env": "DPA_ORTHANC_USERNAME",
+        "password_env": "DPA_ORTHANC_PASSWORD",
+        "verify_tls": true,
+        "allow_insecure_http": false,
+        "timeout_seconds": 120,
+        "cleanup_uploaded": true,
+        "dicom_version": "2023b"
+      }
+    },
+    {
+      "name": "rsna-anonymizer",
+      "config": {
+        "host": "127.0.0.1",
+        "port": 1045,
+        "called_ae_title": "ANONYMIZER",
+        "calling_ae_title": "DPAUDITOR",
+        "output_dir": "/absolute/path/to/rsna-anonymizer-output",
+        "timeout_seconds": 180
+      }
+    },
+    {
+      "name": "rsna-ctp",
+      "config": {
+        "input_dir": "/absolute/path/to/ctp-import",
+        "output_dir": "/absolute/path/to/ctp-storage",
+        "timeout_seconds": 180
+      }
+    }
+  ]
+}

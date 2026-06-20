@@ -1,0 +1,83 @@
+{
+  "noop": {
+    "cases": 60,
+    "injections": 50,
+    "removed_injections": 0,
+    "residual_injections": 50,
+    "removal_rate": 0.0,
+    "removal_rate_ci95": [
+      6.938893903907228e-18,
+      0.07134759913335872
+    ],
+    "auditor_detected_residuals": 50,
+    "auditor_residual_sensitivity": 1.0,
+    "auditor_residual_sensitivity_ci95": [
+      0.9286524008666414,
+      1.0
+    ],
+    "clean_controls": 10,
+    "false_positive_controls": 0,
+    "false_positive_control_rate": 0.0,
+    "false_positive_control_rate_ci95": [
+      0.0,
+      0.2775327998628892
+    ],
+    "readable_outputs": 60,
+    "basic_valid_outputs": 60,
+    "total_runtime_seconds": 0.056074540000054185,
+    "mean_runtime_seconds": 0.0009345756666675698
+  },
+  "metadata-only": {
+    "cases": 60,
+    "injections": 50,
+    "removed_injections": 40,
+    "residual_injections": 10,
+    "removal_rate": 0.8,
+    "removal_rate_ci95": [
+      0.6696289406777459,
+      0.887562499842239
+    ],
+    "auditor_detected_residuals": 10,
+    "auditor_residual_sensitivity": 1.0,
+    "auditor_residual_sensitivity_ci95": [
+      0.7224672001371107,
+      0.9999999999999999
+    ],
+    "clean_controls": 10,
+    "false_positive_controls": 0,
+    "false_positive_control_rate": 0.0,
+    "false_positive_control_rate_ci95": [
+      0.0,
+      0.2775327998628892
+    ],
+    "readable_outputs": 60,
+    "basic_valid_outputs": 60,
+    "total_runtime_seconds": 0.12538217499991333,
+    "mean_runtime_seconds": 0.002089702916665222
+  },
+  "baseline": {
+    "cases": 60,
+    "injections": 50,
+    "removed_injections": 50,
+    "residual_injections": 0,
+    "removal_rate": 1.0,
+    "removal_rate_ci95": [
+      0.9286524008666414,
+      1.0
+    ],
+    "auditor_detected_residuals": 0,
+    "auditor_residual_sensitivity": null,
+    "auditor_residual_sensitivity_ci95": null,
+    "clean_controls": 10,
+    "false_positive_controls": 0,
+    "false_positive_control_rate": 0.0,
+    "false_positive_control_rate_ci95": [
+      0.0,
+      0.2775327998628892
+    ],
+    "readable_outputs": 60,
+    "basic_valid_outputs": 60,
+    "total_runtime_seconds": 0.13196049099985885,
+    "mean_runtime_seconds": 0.0021993415166643143
+  }
+}

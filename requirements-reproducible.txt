@@ -1,0 +1,25 @@
+# Direct versions used for the local 0.7.1 validation on 2026-06-20.
+# The fully hashed CPython 3.13/Linux x86-64 runtime lock remains canonical.
+numpy==2.4.6
+Pillow==12.2.0
+pydicom==3.0.2
+requests==2.34.2
+jsonschema==4.26.0
+pandas==2.3.3
+matplotlib==3.11.0
+streamlit==1.58.0
+pytest==8.4.2
+pytest-cov==6.3.0
+ruff==0.15.18
+mypy==2.1.0
+types-requests==2.33.0.20260518
+bandit==1.9.4
+build==1.5.0
+wheel==0.47.0
+packaging==26.2
+PyYAML==6.0.3
+pynetdicom==3.0.4
+python-docx==1.2.0
+cyclonedx-bom==7.3.0
+pip-audit==2.10.1
+pyinstaller==6.21.0

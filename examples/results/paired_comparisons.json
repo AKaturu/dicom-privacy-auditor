@@ -1,0 +1,20 @@
+{
+  "noop_vs_metadata_only": {
+    "pipeline_a": "noop",
+    "pipeline_b": "metadata-only",
+    "shared_injections": 50,
+    "a_removed_b_failed": 0,
+    "b_removed_a_failed": 40,
+    "discordant_pairs": 40,
+    "two_sided_exact_p": 1.8189894035458565e-12
+  },
+  "metadata_only_vs_baseline": {
+    "pipeline_a": "metadata-only",
+    "pipeline_b": "baseline",
+    "shared_injections": 50,
+    "a_removed_b_failed": 0,
+    "b_removed_a_failed": 10,
+    "discordant_pairs": 10,
+    "two_sided_exact_p": 0.001953125
+  }
+}

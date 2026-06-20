@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Publication package manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "software_version",
+    "title",
+    "synthetic_results",
+    "paths_disclosed",
+    "inputs",
+    "outputs"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "software_version": {
+      "type": "string"
+    },
+    "title": {
+      "type": "string"
+    },
+    "synthetic_results": {
+      "type": "boolean"
+    },
+    "inputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ]
+      }
+    },
+    "outputs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "path",
+          "sha256"
+        ]
+      }
+    },
+    "review_summary": {
+      "type": [
+        "object",
+        "null"
+      ]
+    },
+    "paths_disclosed": {
+      "type": "boolean"
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,10 @@
+[
+  "python",
+  "/absolute/path/to/official-midi-validator.py",
+  "--imported",
+  "{imported}",
+  "--candidate",
+  "{candidate}",
+  "--output",
+  "{output}"
+]

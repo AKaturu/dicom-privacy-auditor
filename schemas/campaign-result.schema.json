@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "MIDI live campaign result",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "application_version",
+    "campaign_definition_sha256",
+    "imported",
+    "environment",
+    "results"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "string"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "application_version": {
+      "type": "string"
+    },
+    "campaign_definition_sha256": {
+      "type": "string"
+    },
+    "imported": {
+      "type": "string"
+    },
+    "environment": {
+      "type": "object"
+    },
+    "results": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  },
+  "additionalProperties": false
+}

@@ -1,0 +1,47 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Paired benchmark comparisons",
+  "type": "object",
+  "additionalProperties": {
+    "type": "object",
+    "required": [
+      "pipeline_a",
+      "pipeline_b",
+      "shared_injections",
+      "a_removed_b_failed",
+      "b_removed_a_failed",
+      "discordant_pairs",
+      "two_sided_exact_p"
+    ],
+    "additionalProperties": false,
+    "properties": {
+      "pipeline_a": {
+        "type": "string"
+      },
+      "pipeline_b": {
+        "type": "string"
+      },
+      "shared_injections": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "a_removed_b_failed": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "b_removed_a_failed": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "discordant_pairs": {
+        "type": "integer",
+        "minimum": 0
+      },
+      "two_sided_exact_p": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
+    }
+  }
+}

@@ -1,0 +1,60 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Synthetic demonstration manifest",
+  "type": "object",
+  "required": [
+    "schema_version",
+    "generated_at",
+    "software_version",
+    "synthetic_results",
+    "seed",
+    "cases_per_stratum",
+    "clean_controls",
+    "pipelines",
+    "review_cases",
+    "summary",
+    "artifacts"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string"
+    },
+    "software_version": {
+      "type": "string"
+    },
+    "seed": {
+      "type": "integer"
+    },
+    "cases_per_stratum": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "clean_controls": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "pipelines": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "review_cases": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "summary": {
+      "type": "object"
+    },
+    "artifacts": {
+      "type": "object"
+    },
+    "synthetic_results": {
+      "const": true
+    }
+  },
+  "additionalProperties": false
+}

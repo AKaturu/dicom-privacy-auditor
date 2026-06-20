@@ -1,0 +1,31 @@
+name: Detection rule request
+description: Propose a transparent privacy-risk rule
+labels: [enhancement, detection-rule]
+body:
+  - type: markdown
+    attributes:
+      value: "Use synthetic examples only. Include likely false positives and false negatives."
+  - type: input
+    id: keyword
+    attributes:
+      label: DICOM keyword or location
+    validations:
+      required: true
+  - type: textarea
+    id: rationale
+    attributes:
+      label: Privacy rationale
+    validations:
+      required: true
+  - type: textarea
+    id: example
+    attributes:
+      label: Synthetic example
+    validations:
+      required: true
+  - type: textarea
+    id: limitations
+    attributes:
+      label: Anticipated limitations
+    validations:
+      required: true

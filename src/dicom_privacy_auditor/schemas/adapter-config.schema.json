@@ -1,0 +1,254 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/adapter-config.schema.json",
+  "title": "DICOM Privacy Auditor Adapter Configuration",
+  "oneOf": [
+    {
+      "title": "Orthanc",
+      "type": "object",
+      "required": [
+        "base_url"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string",
+          "pattern": "^https?://"
+        },
+        "username": {
+          "type": "string"
+        },
+        "password": {
+          "type": "string"
+        },
+        "username_env": {
+          "type": "string"
+        },
+        "password_env": {
+          "type": "string"
+        },
+        "allow_literal_credentials": {
+          "type": "boolean"
+        },
+        "dicom_version": {
+          "enum": [
+            "2008",
+            "2017c",
+            "2021b",
+            "2023b"
+          ]
+        },
+        "cleanup_uploaded": {
+          "type": "boolean"
+        },
+        "cleanup_already_stored": {
+          "type": "boolean"
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "max_request_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_response_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "include_error_body": {
+          "type": "boolean"
+        },
+        "verify_tls": {
+          "oneOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "string"
+            }
+          ]
+        },
+        "allow_insecure_http": {
+          "type": "boolean"
+        },
+        "allow_insecure_tls": {
+          "type": "boolean"
+        },
+        "keep": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "remove": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "replace": {
+          "type": "object"
+        },
+        "keep_private_tags": {
+          "type": "boolean"
+        },
+        "force": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "title": "Directory-based RSNA CTP or generic pipeline",
+      "type": "object",
+      "required": [
+        "input_dir",
+        "output_dir"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "input_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "output_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_command": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "working_directory": {
+          "type": "string"
+        },
+        "startup_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "poll_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stop_process_on_close": {
+          "type": "boolean"
+        },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cleanup_output": {
+          "type": "boolean"
+        }
+      }
+    },
+    {
+      "title": "RSNA DICOM Anonymizer",
+      "type": "object",
+      "required": [
+        "output_dir"
+      ],
+      "not": {
+        "required": [
+          "input_dir"
+        ]
+      },
+      "additionalProperties": false,
+      "properties": {
+        "host": {
+          "type": "string",
+          "minLength": 1
+        },
+        "port": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 65535
+        },
+        "called_ae_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "calling_ae_title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16
+        },
+        "output_dir": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_model": {
+          "type": "string"
+        },
+        "executable": {
+          "type": "string",
+          "minLength": 1
+        },
+        "start_command": {
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            },
+            {
+              "type": "string",
+              "minLength": 1
+            }
+          ]
+        },
+        "working_directory": {
+          "type": "string"
+        },
+        "startup_seconds": {
+          "type": "number",
+          "minimum": 0
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "poll_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "stop_process_on_close": {
+          "type": "boolean"
+        },
+        "max_input_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "max_output_bytes": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "cleanup_output": {
+          "type": "boolean"
+        }
+      }
+    }
+  ]
+}
