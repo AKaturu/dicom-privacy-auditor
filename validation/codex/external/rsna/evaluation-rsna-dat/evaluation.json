@@ -1,0 +1,457 @@
+{
+  "pipeline": "rsna-dat",
+  "benchmark_name": "DICOM Privacy Auditor Synthetic Benchmark",
+  "summary": {
+    "cases": 12,
+    "injections": 10,
+    "removed_injections": 8,
+    "residual_injections": 2,
+    "removal_rate": 0.8,
+    "removal_rate_ci95": [
+      0.49016247153664183,
+      0.9433178485456247
+    ],
+    "auditor_detected_residuals": 2,
+    "auditor_residual_sensitivity": 1.0,
+    "auditor_residual_sensitivity_ci95": [
+      0.34238022750665303,
+      1.0
+    ],
+    "clean_controls": 2,
+    "false_positive_controls": 2,
+    "false_positive_control_rate": 1.0,
+    "false_positive_control_rate_ci95": [
+      0.34238022750665303,
+      1.0
+    ],
+    "readable_outputs": 12,
+    "basic_valid_outputs": 12,
+    "total_runtime_seconds": 13.900175700007821,
+    "mean_runtime_seconds": 1.1583479750006518
+  },
+  "by_stratum": [
+    {
+      "stratum": "file_meta",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "filename",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "free_text",
+      "injections": 1,
+      "removed": 0,
+      "residual": 1,
+      "removal_rate": 0.0,
+      "removal_rate_ci95_low": 0.0,
+      "removal_rate_ci95_high": 0.7934506856227626,
+      "auditor_detected_residuals": 1,
+      "auditor_residual_sensitivity": 1.0
+    },
+    {
+      "stratum": "nested_sequence",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "pixel_annotation",
+      "injections": 1,
+      "removed": 0,
+      "residual": 1,
+      "removal_rate": 0.0,
+      "removal_rate_ci95_low": 0.0,
+      "removal_rate_ci95_high": 0.7934506856227626,
+      "auditor_detected_residuals": 1,
+      "auditor_residual_sensitivity": 1.0
+    },
+    {
+      "stratum": "preamble",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "private_attribute",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "standard_metadata",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "temporal",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    },
+    {
+      "stratum": "uid",
+      "injections": 1,
+      "removed": 1,
+      "residual": 0,
+      "removal_rate": 1.0,
+      "removal_rate_ci95_low": 0.20654931437723745,
+      "removal_rate_ci95_high": 1.0,
+      "auditor_detected_residuals": 0,
+      "auditor_residual_sensitivity": null
+    }
+  ],
+  "cases": [
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00001",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.9453004000024521,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00001",
+          "injection_id": "case-00001:temporal:001",
+          "stratum": "temporal",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00002",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 2.0546332000012626,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00002",
+          "injection_id": "case-00002:nested_sequence:001",
+          "stratum": "nested_sequence",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00003",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 2.145385800002259,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00003",
+          "injection_id": "case-00003:standard_metadata:001",
+          "stratum": "standard_metadata",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00004",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 1.8572113999980502,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00004",
+          "injection_id": "case-00004:file_meta:001",
+          "stratum": "file_meta",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00005",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8917658999998821,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00005",
+          "injection_id": "case-00005:filename:001",
+          "stratum": "filename",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00006",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8431405000010272,
+      "high_or_critical_findings": 3,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00006",
+          "injection_id": "case-00006:free_text:001",
+          "stratum": "free_text",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED",
+            "FREE_TEXT_REVIEW",
+            "IDENTIFIER_PATTERN_IN_TEXT",
+            "SOURCE_VALUE_RETAINED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00007",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8787827999985893,
+      "high_or_critical_findings": 6,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00007",
+          "injection_id": "case-00007:pixel_annotation:001",
+          "stratum": "pixel_annotation",
+          "output_present": true,
+          "residual": true,
+          "removed": false,
+          "auditor_detected": true,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED",
+            "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
+            "PIXEL_REVIEW_REQUIRED",
+            "PIXEL_STATUS_UNCONFIRMED",
+            "PIXEL_TEXT_LIKE_REGION"
+          ],
+          "similarity": 1.0000001192092896,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00008",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8449839999957476,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00008",
+          "injection_id": "case-00008:private_attribute:001",
+          "stratum": "private_attribute",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00009",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8755912000051467,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00009",
+          "injection_id": "case-00009:uid:001",
+          "stratum": "uid",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "case-00010",
+      "clean_control": false,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8452575999981491,
+      "high_or_critical_findings": 0,
+      "error": null,
+      "injections": [
+        {
+          "pipeline": "rsna-dat",
+          "case_id": "case-00010",
+          "injection_id": "case-00010:preamble:001",
+          "stratum": "preamble",
+          "output_present": true,
+          "residual": false,
+          "removed": true,
+          "auditor_detected": false,
+          "finding_codes": [
+            "DEIDENTIFICATION_METHOD_UNDOCUMENTED"
+          ],
+          "similarity": null,
+          "error": null
+        }
+      ]
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "control-00001",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.8764907000004314,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": []
+    },
+    {
+      "pipeline": "rsna-dat",
+      "case_id": "control-00002",
+      "clean_control": true,
+      "output_present": true,
+      "readable": true,
+      "valid_basic": true,
+      "runtime_seconds": 0.841632200004824,
+      "high_or_critical_findings": 2,
+      "error": null,
+      "injections": []
+    }
+  ]
+}

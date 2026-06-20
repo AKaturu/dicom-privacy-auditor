@@ -1,0 +1,22 @@
+{
+  "Name": "DPA-Codex-External-Validation-Orthanc",
+  "RemoteAccessAllowed": true,
+  "AuthenticationEnabled": false,
+  "DicomAet": "DPAORTHANC",
+  "DicomPort": 4242,
+  "HttpPort": 8042,
+  "StorageDirectory": "/var/lib/orthanc/db",
+  "IndexDirectory": "/var/lib/orthanc/db",
+  "MaximumStorageSize": 256,
+  "OverwriteInstances": true,
+  "DicomModalities": {},
+  "RegisteredUsers": {},
+  "Plugins": ["/usr/share/orthanc/plugins"],
+  "DicomWeb": {
+    "Enable": true,
+    "Root": "/dicom-web/",
+    "EnableWado": true,
+    "WadoRoot": "/wado",
+    "Ssl": false
+  }
+}

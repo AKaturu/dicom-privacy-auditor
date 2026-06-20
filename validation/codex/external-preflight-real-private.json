@@ -1,0 +1,85 @@
+{
+  "checks": [
+    {
+      "detail": "not configured",
+      "fingerprint": null,
+      "name": "midi_b_corpus",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "not configured",
+      "fingerprint": null,
+      "name": "midi_b_answer_key",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "not configured",
+      "fingerprint": null,
+      "name": "official_validator",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "not configured",
+      "fingerprint": null,
+      "name": "rsna_anonymizer",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "not configured",
+      "fingerprint": null,
+      "name": "rsna_ctp",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "HTTP 200: http://127.0.0.1:8042/system",
+      "fingerprint": null,
+      "name": "orthanc_http",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "detail": "connected to 127.0.0.1:4242",
+      "fingerprint": null,
+      "name": "orthanc_dimse",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "detail": "HTTP 200: http://127.0.0.1:8042/dicom-web/studies?limit=1",
+      "fingerprint": null,
+      "name": "dicomweb",
+      "required": true,
+      "status": "ready"
+    },
+    {
+      "detail": "configured reviewers: 0",
+      "fingerprint": null,
+      "name": "blinded_reviewers",
+      "required": true,
+      "status": "missing"
+    },
+    {
+      "detail": "all configured",
+      "fingerprint": null,
+      "name": "credentials",
+      "required": true,
+      "status": "ready"
+    }
+  ],
+  "limitations": [
+    "A ready preflight confirms resource availability, not clinical safety or regulatory compliance.",
+    "Inventory fingerprints cover relative paths and file sizes; use content mode for byte-level corpus identity.",
+    "Institutional authorization and data-use approvals must be verified outside this tool."
+  ],
+  "ready": 4,
+  "required_ready": 4,
+  "required_total": 10,
+  "schema_version": "1.0",
+  "status": "blocked",
+  "total": 10
+}

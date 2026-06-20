@@ -1,0 +1,190 @@
+{
+  "claim_boundary": "Real public external sources were used where available. Full external validation remains blocked until official MIDI-B data/answer keys/validator, reviewer identities, authorization, and signing/native-runner resources are supplied.",
+  "generated_at_utc": "2026-06-20T23:42:35Z",
+  "local_environment": {
+    "c_drive_free_bytes_measured_after_downloads": 3699666944,
+    "date_local": "2026-06-20",
+    "docker_client_server": "29.5.3 / 29.5.3",
+    "java": "1.8.0_491",
+    "python_launchers": [
+      "3.11"
+    ]
+  },
+  "modern_rsna_anonymizer": {
+    "reason": "PyPI rsna-anonymizer 18.0.7 requires Python >=3.12,<3.13; only Python 3.11 is registered locally.",
+    "status": "blocked"
+  },
+  "orthanc": {
+    "container_lifecycle": {
+      "evidence_collected_while_running": true,
+      "stopped_after_evidence_collection": true,
+      "stopped_at_utc": "2026-06-20T23:45:10Z"
+    },
+    "docker_image": "orthancteam/orthanc:26.6.0",
+    "docker_repo_digest": "orthancteam/orthanc@sha256:510ef4ce24699104244b00d2b93350a801fc2f1c6b0bfc6a1f15e546bff2d1f4",
+    "image_created_utc": "2026-06-01T09:39:59.295064572Z",
+    "image_id": "sha256:510ef4ce24699104244b00d2b93350a801fc2f1c6b0bfc6a1f15e546bff2d1f4",
+    "probes": {
+      "dicomweb": "HTTP 200 on /dicom-web/studies?limit=1",
+      "orthanc_dimse": "TCP connect succeeded on 127.0.0.1:4242",
+      "orthanc_http": "HTTP 200 on /system"
+    },
+    "status": "executed",
+    "synthetic_benchmark_summary": {
+      "auditor_detected_residuals": 1,
+      "auditor_residual_sensitivity": 1.0,
+      "auditor_residual_sensitivity_ci95": [
+        0.20654931437723745,
+        1.0
+      ],
+      "basic_valid_outputs": 12,
+      "cases": 12,
+      "clean_controls": 2,
+      "false_positive_control_rate": 1.0,
+      "false_positive_control_rate_ci95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "false_positive_controls": 2,
+      "injections": 10,
+      "mean_runtime_seconds": 0.3660812083332227,
+      "readable_outputs": 12,
+      "removal_rate": 0.9,
+      "removal_rate_ci95": [
+        0.5958499732047615,
+        0.9821237869049271
+      ],
+      "removed_injections": 9,
+      "residual_injections": 1,
+      "total_runtime_seconds": 4.392974499998672
+    },
+    "system": {
+      "api_version": 30,
+      "dicom_aet": "DPAORTHANC",
+      "dicom_port": 4242,
+      "http_port": 8042,
+      "http_secure": false,
+      "maximum_storage_size_mb": 256,
+      "name": "DPA-Codex-External-Validation-Orthanc",
+      "plugins_enabled": true,
+      "version": "1.12.11"
+    }
+  },
+  "preflight": {
+    "missing_required_checks": [
+      "midi_b_corpus",
+      "midi_b_answer_key",
+      "official_validator",
+      "rsna_anonymizer",
+      "rsna_ctp",
+      "blinded_reviewers"
+    ],
+    "ready": 4,
+    "ready_checks": [
+      "orthanc_http",
+      "orthanc_dimse",
+      "dicomweb",
+      "credentials"
+    ],
+    "required_ready": 4,
+    "required_total": 10,
+    "status": "blocked",
+    "total": 10
+  },
+  "remaining_blockers": [
+    "MIDI-B corpus/answer keys/mappings were not downloaded or supplied. Local free space after downloads was 3,699,666,944 bytes, below the observed 7.63 GB validation download alone.",
+    "Official MIDI-B validator and official challenge scoring access were not supplied.",
+    "Synapse challenge remains closed and any restricted/test-phase access must come from authorized project-owner credentials or access grants.",
+    "Modern RSNA Anonymizer was not installed because the local Python runtime is 3.11 and the package requires Python >=3.12,<3.13.",
+    "RSNA CTP was downloaded and extracted but did not present a runnable directory anonymizer pipeline; Runner.jar -help throws NullPointerException.",
+    "Two independent blinded human reviewers and an adjudicator were not supplied.",
+    "Institutional endpoints, authorization letters, native GitHub runner provenance, and code-signing/notarization credentials were not supplied."
+  ],
+  "rsna_dat": {
+    "command_wrapper": "validation/codex/external/rsna/run-dat.cmd {input} {output}",
+    "ctp_probe": "CTP Runner.jar -help throws NullPointerException before help output; CTP is acquired but not configured/executed.",
+    "installer_hashes_sha256": {
+      "Anonymizer-installer.jar": "F48D552AABDF5685306F08574134E14982E02D54F9E6156A55B801CF71C74B81",
+      "CTP-installer.jar": "D5B4324B52924F24F67C3BDC5DC711D8AE35DC3BF17148BC41CFF5589FAB08FB",
+      "DicomAnonymizerTool-installer.jar": "BDBFEB2155B586100F65F0842085E1AF6AB228309D2437C5F3F790F680EEC61C"
+    },
+    "status": "executed",
+    "synthetic_benchmark_summary": {
+      "auditor_detected_residuals": 2,
+      "auditor_residual_sensitivity": 1.0,
+      "auditor_residual_sensitivity_ci95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "basic_valid_outputs": 12,
+      "cases": 12,
+      "clean_controls": 2,
+      "false_positive_control_rate": 1.0,
+      "false_positive_control_rate_ci95": [
+        0.34238022750665303,
+        1.0
+      ],
+      "false_positive_controls": 2,
+      "injections": 10,
+      "mean_runtime_seconds": 1.1583479750006518,
+      "readable_outputs": 12,
+      "removal_rate": 0.8,
+      "removal_rate_ci95": [
+        0.49016247153664183,
+        0.9433178485456247
+      ],
+      "removed_injections": 8,
+      "residual_injections": 2,
+      "total_runtime_seconds": 13.900175700007821
+    },
+    "tool": "RSNA DicomAnonymizerTool DAT.jar from legacy RSNA downloads"
+  },
+  "schema_version": "1.0",
+  "sources": [
+    {
+      "name": "TCIA MIDI-B-Test-MIDI-B-Validation collection",
+      "url": "https://www.cancerimagingarchive.net/collection/midi-b-test-midi-b-validation/",
+      "used_for": "Identified the public MIDI-B data source. The validation download was observed as 7.63 GB, which exceeds local free disk space during this run."
+    },
+    {
+      "name": "MIDI resources paper",
+      "url": "https://arxiv.org/abs/2508.01889",
+      "used_for": "Confirmed MIDI dataset scope: validation/test subjects, instances, synthetic PHI/PII, answer keys, validation script, and TCIA DOI/resource availability."
+    },
+    {
+      "name": "Synapse MIDI-B challenge",
+      "url": "https://www.synapse.org/Synapse:syn53065760",
+      "used_for": "Confirmed challenge status, model-to-data nature, and challenge data folder metadata."
+    },
+    {
+      "name": "Orthanc Docker documentation",
+      "url": "https://orthanc.uclouvain.be/book/users/docker.html",
+      "used_for": "Confirmed official Docker-based Orthanc operation and ports."
+    },
+    {
+      "name": "Docker Hub orthancteam/orthanc",
+      "url": "https://hub.docker.com/r/orthancteam/orthanc",
+      "used_for": "Confirmed orthancteam/orthanc published image component information."
+    },
+    {
+      "name": "RSNA DicomAnonymizerTool wiki",
+      "url": "https://mircwiki.rsna.org/index.php?title=The_DicomAnonymizerTool",
+      "used_for": "Confirmed DAT command-line usage: java -jar DAT.jar with -in and -out arguments."
+    },
+    {
+      "name": "RSNA legacy mirc.rsna.org downloads repository",
+      "url": "https://github.com/RSNA/mirc.rsna.org",
+      "used_for": "Downloaded and hashed RSNA legacy installer JARs without redistributing them in public artifacts."
+    },
+    {
+      "name": "RSNA Anonymizer PyPI",
+      "url": "https://pypi.org/project/rsna-anonymizer/",
+      "used_for": "Confirmed latest package metadata, release date, Python >=3.12,<3.13 requirement, hashes, and provenance metadata."
+    },
+    {
+      "name": "NBIA Toolkit documentation",
+      "url": "https://nbia-toolkit.readthedocs.io/en/latest/",
+      "used_for": "Confirmed programmatic NBIA/TCIA access paths and Guest/OAuth access distinction."
+    }
+  ]
+}

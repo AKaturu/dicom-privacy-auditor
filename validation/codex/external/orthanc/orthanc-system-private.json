@@ -1,0 +1,41 @@
+﻿{
+   "ApiVersion" : 30,
+   "Capabilities" : 
+   {
+      "HasExtendedChanges" : true,
+      "HasExtendedFind" : true,
+      "HasKeyValueStores" : true,
+      "HasQueues" : true,
+      "HasReserveQueueValue" : true
+   },
+   "CheckRevisions" : false,
+   "DatabaseBackendPlugin" : null,
+   "DatabaseServerIdentifier" : "224d6818-69f16e6e-9f7c066f-8aa3c238-d2c70cb0",
+   "DatabaseVersion" : 6,
+   "DicomAet" : "DPAORTHANC",
+   "DicomDefaultRetrieveMethod" : "C-MOVE",
+   "DicomPort" : 4242,
+   "HasLabels" : true,
+   "HttpPort" : 8042,
+   "IngestTranscoding" : "",
+   "IsHttpServerSecure" : false,
+   "MainDicomTags" : 
+   {
+      "Instance" : "0008,0012;0008,0013;0008,0018;0020,0012;0020,0013;0020,0032;0020,0037;0020,0100;0020,4000;0028,0008;0054,1330",
+      "Patient" : "0010,0010;0010,0020;0010,0030;0010,0040;0010,1000",
+      "Series" : "0008,0021;0008,0031;0008,0060;0008,0070;0008,0201;0008,1010;0008,103e;0008,1070;0018,0010;0018,0015;0018,0024;0018,1030;0018,1090;0018,1400;0020,000e;0020,0011;0020,0037;0020,0105;0020,1002;0040,0244;0040,0245;0040,0254;0040,0275;0054,0081;0054,0101;0054,1000",
+      "Study" : "0008,0020;0008,0030;0008,0050;0008,0080;0008,0090;0008,0201;0008,1030;0020,000d;0020,0010;0032,1032;0032,1060"
+   },
+   "MaximumPatientCount" : 0,
+   "MaximumStorageMode" : "Recycle",
+   "MaximumStorageSize" : 256,
+   "Name" : "DPA-Codex-External-Validation-Orthanc",
+   "OverwriteInstances" : true,
+   "PatientLevelEnabled" : true,
+   "PluginsEnabled" : true,
+   "ReadOnly" : false,
+   "StorageAreaPlugin" : null,
+   "StorageCompression" : false,
+   "UserMetadata" : {},
+   "Version" : "1.12.11"
+}

@@ -1,0 +1,8 @@
+{
+  "fingerprint_mode": "content",
+  "http_timeout_seconds": 30,
+  "orthanc_http_url": "http://127.0.0.1:8042/system",
+  "orthanc_dimse_host": "127.0.0.1",
+  "orthanc_dimse_port": 4242,
+  "dicomweb_url": "http://127.0.0.1:8042/dicom-web/studies?limit=1"
+}
