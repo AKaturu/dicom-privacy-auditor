@@ -56,6 +56,16 @@ Orthanc `orthancteam/orthanc:26.6.0` was pulled and run locally with HTTP, DIMSE
 
 No source tests added; external-source evidence was validated through benchmark runs, evaluator outputs, public preflight JSON, source hashes, and artifact/path-leak checks.
 
+### Synthetic-First GitHub Data Policy
+
+#### Validation
+
+README and docs now make the public GitHub path synthetic-first: demos, screenshots, videos, examples, and tests use generated synthetic DICOM data. Real MIDI-B or institutional data remains supported only as a governed local workflow documented in `docs/REAL_DATA_SETUP.md`.
+
+#### Tests Added
+
+No source tests added; documentation links, ignore rules, and claim boundaries were validated with text searches and git status checks.
+
 ## Current Work
 
 ### Active Feature
@@ -64,7 +74,7 @@ None.
 
 ### Progress
 
-Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, and official validator/anonymizer command availability is now wired into preflight.
+Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions.
 
 ### Remaining Work
 
@@ -94,4 +104,4 @@ The Tk desktop UI was not captured because this Windows Python/Tk runtime previo
 
 ## Resume Instructions
 
-Start from the latest commit after the real external-source tool-wiring update. Review `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json` before making any external-validation claim changes.
+Start from the latest commit after the synthetic-first GitHub data-policy update. Review `README.md`, `docs/REAL_DATA_SETUP.md`, `docs/DEMO.md`, `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json` before making any external-validation claim changes.

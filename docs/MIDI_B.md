@@ -4,6 +4,8 @@
 
 The MIDI-B module normalizes the public Medical Imaging De-Identification Benchmark answer key and evaluates a candidate de-identification output without copying the source image collection. It is designed for the public SQLite answer keys and patient/UID mapping CSV files distributed with the MIDI-B validation and test collections.
 
+The public GitHub project does not include MIDI-B DICOM objects or answer-key databases. Use the built-in synthetic benchmark for demonstrations and reserve MIDI-B for governed local validation. See [Real data setup](REAL_DATA_SETUP.md) before downloading or importing real resources.
+
 ## Supported answer-key actions
 
 The importer recognizes all ten published action labels:
@@ -108,7 +110,7 @@ Exact pixel equality is intentionally conservative. It can mark lossless-equival
 
 ## Validation status
 
-The importer/evaluator is covered by a complete ten-action SQLite fixture in the automated test suite. The full public MIDI-B collections are not redistributed with this repository and were not executed during the local v0.6.1 build. A publication analysis should archive the exact TCIA collection version, answer-key checksum, mapping checksums, tool configuration, and evaluation outputs.
+The importer/evaluator is covered by a complete ten-action SQLite fixture in the automated test suite. The full public MIDI-B collections are not redistributed with this repository and are not part of the synthetic demo. A publication analysis should archive the exact TCIA collection version, answer-key checksum, mapping checksums, tool configuration, and evaluation outputs.
 
 Public collection page:
 

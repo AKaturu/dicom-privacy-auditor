@@ -14,6 +14,19 @@ examples/demo_workspace/
 .streamlit/secrets.toml
 .DS_Store
 Thumbs.db
+# Real or governed data must stay outside public commits.
+/data/
+/real-data/
+/external-data/
+/midi-data/
+*.dcm
+*.dicom
+*.tcia
+*.nii
+*.nii.gz
+*.sqlite
+*.db
+*.sqlite3
 # DICOM Standard source documents and locally generated complete rule tables
 vendor/part15*.docx
 part15*.docx
@@ -24,3 +37,5 @@ ps315_*_table_e1_*.json
 *.sqlite-journal
 *.sqlite-wal
 *.sqlite-shm
+validation/live/*
+!validation/live/README.md

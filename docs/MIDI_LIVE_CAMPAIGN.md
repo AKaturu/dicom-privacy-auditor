@@ -2,9 +2,11 @@
 
 The campaign runner applies one or more configured de-identification workflows to a complete imported MIDI-B corpus, evaluates the outputs, and records reproducibility metadata.
 
+This is an opt-in real-data workflow. The public GitHub demo should use the synthetic demonstration in [Demo](DEMO.md). Do not commit MIDI-B DICOM objects, answer-key databases, reviewer identity mappings, or unredacted validation logs.
+
 ## Dataset preparation
 
-Download the public MIDI-B resources independently from TCIA. The project does not redistribute the data. Import the answer key and source objects:
+Download the public MIDI-B resources independently from TCIA after the project owner accepts the applicable terms. The project does not redistribute the data. Keep the corpus and answer-key database outside the repository, then import the answer key and source objects:
 
 ```bash
 dicom-privacy-midi import \
@@ -143,6 +145,8 @@ A defensible comparison should include:
 ## Execution status
 
 The repository contains the complete campaign orchestration and synthetic integration tests. A full official collection run is environment-dependent and must not be claimed until the TCIA data and live tool installations have actually been processed. Record completed external runs in `validation/live/` using the included template.
+
+For setup details and suggested local directory layout, see [Real data setup](REAL_DATA_SETUP.md).
 
 ---
 

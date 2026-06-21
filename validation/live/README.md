@@ -2,6 +2,8 @@
 
 This directory is intentionally empty in source releases. Add one subdirectory per externally executed validation campaign.
 
+The public GitHub project should use synthetic data for demos and examples. Real validation records belong here only after the corpus, answer key, reviewer process, and tool versions have been governed and redacted. Never commit source DICOM data or answer-key databases.
+
 Recommended contents:
 
 ```text
