@@ -12,7 +12,7 @@ Complete every locally possible validation/release/demo task while preserving th
 
 ### Current Status
 
-Local v0.7.2 release gate passed, final validation evidence was packaged, synthetic demo screenshots/video were captured, and real public external sources were acquired/executed where possible. Full external validation remains blocked because official MIDI-B resources, official scoring/validator access, independent reviewers, institutional authorization, native runners, and signing credentials were not supplied.
+Local v0.7.2 release gate passed, final validation evidence was packaged, synthetic demo screenshots/video were captured, and real public external sources were acquired/executed where possible. The real external preflight is now 7 of 10 required checks ready. Full external validation remains blocked because the actual MIDI-B DICOM corpus, MIDI-B answer-key database, independent reviewers, institutional authorization, native runners, and signing credentials were not supplied.
 
 ## Completed Features
 
@@ -50,7 +50,7 @@ No source tests added; media was validated with nonblank image checks, video met
 
 #### Validation
 
-Orthanc `orthancteam/orthanc:26.6.0` was pulled and run locally with HTTP, DIMSE, and DICOMweb probes passing. The synthetic benchmark was executed through the Orthanc adapter and through RSNA DicomAnonymizerTool DAT from the RSNA legacy downloads. The real-source preflight remains blocked at 4 of 10 required checks ready; evidence is under `validation/codex/external`.
+Orthanc `orthancteam/orthanc:26.6.0` was pulled and run locally with HTTP, DIMSE, and DICOMweb probes passing. The synthetic benchmark was executed through the Orthanc adapter and through RSNA DicomAnonymizerTool DAT from the RSNA legacy downloads. Public TCIA MIDI-B manifests and mapping CSVs were downloaded and hashed, CBIIT `MIDI_validation_script` was cloned and smoke-tested with its Python dependencies, Python 3.12 plus `rsna-anonymizer` 18.0.7 were installed and smoke-tested, IBM Aspera `ascp` was installed, and the real-source preflight improved to 7 of 10 required checks ready. Evidence is under `validation/codex/external`.
 
 #### Tests Added
 
@@ -64,7 +64,7 @@ None.
 
 ### Progress
 
-Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data.
+Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, and official validator/anonymizer command availability is now wired into preflight.
 
 ### Remaining Work
 
@@ -72,10 +72,11 @@ Official external validation cannot be marked complete until the missing governe
 
 ## Next Actions
 
-1. Supply official MIDI-B collections, answer keys, mappings, and validator through approved secure local paths with enough disk space for the TCIA downloads.
-2. Supply modern RSNA Anonymizer Python 3.12 runtime/configuration and a working RSNA CTP directory pipeline if those tools must be in scope.
-3. Supply independent reviewers/adjudicator, authorized institutional endpoints if applicable, native runner provenance, and signing/notary credentials if trusted signing is desired.
-4. Re-run external preflight and only then execute the official campaign and human review.
+1. Download the official MIDI-B DICOM corpus from the acquired TCIA `.tcia` manifests into an approved local path and configure `midi_b_corpus`.
+2. Complete the TCIA/Faspex answer-key download through an authenticated bearer-token transfer flow and configure `midi_b_answer_key`.
+3. Supply a working RSNA CTP directory pipeline if CTP execution must be claimed; command availability is ready, but pipeline execution is not.
+4. Supply independent reviewers/adjudicator, authorized institutional endpoints if applicable, native runner provenance, and signing/notary credentials if trusted signing is desired.
+5. Re-run external preflight and only then execute the official campaign and human review.
 
 ## Risks
 
@@ -85,7 +86,7 @@ Which exact external resources, reviewers, and credentials will be supplied by t
 
 ### Known Issues
 
-The final status remains `PARTIALLY COMPLETE - EXTERNAL BLOCKERS REMAIN`. The real public Orthanc and RSNA DAT evidence improves the artifact, but must not be rewritten as official MIDI-B or human-reviewed completion.
+The final status remains `PARTIALLY COMPLETE - EXTERNAL BLOCKERS REMAIN`. The real public Orthanc, RSNA DAT, CBIIT validator-source, RSNA Python anonymizer, Aspera, and MIDI-B manifest/mapping evidence improves the artifact, but must not be rewritten as official MIDI-B corpus validation or human-reviewed completion.
 
 ### Technical Concerns
 
@@ -93,4 +94,4 @@ The Tk desktop UI was not captured because this Windows Python/Tk runtime previo
 
 ## Resume Instructions
 
-Start from the latest commit after the real external-source addendum. Review `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, and `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md` before making any external-validation claim changes.
+Start from the latest commit after the real external-source tool-wiring update. Review `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json` before making any external-validation claim changes.

@@ -1,6 +1,6 @@
 # Final Validation Report
 
-Status: `PARTIALLY COMPLETE — EXTERNAL BLOCKERS REMAIN`
+Status: `PARTIALLY COMPLETE - EXTERNAL BLOCKERS REMAIN`
 
 Generated UTC: `2026-06-20T22:24:18.001211+00:00`
 
@@ -13,6 +13,12 @@ Validated source commit: `a37f7e402c03513f717e7baecfe1d6f63e85230a`
 All work possible in the supplied environment was completed. The local release gate passed for the patched v0.7.2 source tree, the v0.7.2 wheel/source artifacts were rebuilt and checked, and a redacted external preflight was executed with a verified resource lock.
 
 The full external study is not complete because required real resources were unavailable. No MIDI-B performance, official-validator parity, live Orthanc/RSNA/CTP workflow result, independent human-review result, institutional PACS/DICOMweb result, native GitHub runner result, trusted signing result, notarization result, clinical-safety claim, regulatory claim, HIPAA/GDPR compliance claim, or DICOM PS3.15 certification claim is made.
+
+## Post-Release External Evidence Addendum
+
+On 2026-06-21 UTC, additional real public-source work improved the external preflight from the original package-era `1/10` required checks ready to `7/10` required checks ready. The current addendum is recorded in `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_RECORD.json`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json`.
+
+The remaining required blockers are the actual MIDI-B DICOM corpus, the MIDI-B answer-key database, and two real blinded reviewers. The packaged v0.7.2 release artifacts listed below were not rebuilt by this addendum.
 
 ## Completed Commands And Results
 

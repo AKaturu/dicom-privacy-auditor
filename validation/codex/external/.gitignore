@@ -1,0 +1,9 @@
+# Local source downloads and browser/API captures used to build evidence.
+faspex-*.html
+faspex-*.js
+faspex-*.txt
+midi-b-challenge/
+midi-b-validation-answer-key-faspex.html
+midi-validation-script/
+tcia-midi-b-page.html
+tcia-midi-b-wiki.html

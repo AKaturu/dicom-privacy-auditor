@@ -1,24 +1,53 @@
 {
-  "claim_boundary": "Real public external sources were used where available. Full external validation remains blocked until official MIDI-B data/answer keys/validator, reviewer identities, authorization, and signing/native-runner resources are supplied.",
-  "generated_at_utc": "2026-06-20T23:42:35Z",
+  "claim_boundary": "Real public external sources were used where available. Full external validation remains blocked until the actual MIDI-B DICOM corpus, answer-key database, reviewer identities, authorization, and signing/native-runner resources are supplied.",
+  "generated_at_utc": "2026-06-21T03:25:10Z",
   "local_environment": {
-    "c_drive_free_bytes_measured_after_downloads": 3699666944,
+    "c_drive_free_bytes_measured_after_downloads": 5103853568,
     "date_local": "2026-06-20",
+    "d_drive_free_bytes_measured_after_downloads": 1540052889600,
     "docker_client_server": "29.5.3 / 29.5.3",
     "java": "1.8.0_491",
     "python_launchers": [
-      "3.11"
+      "3.11",
+      "3.12"
     ]
   },
   "modern_rsna_anonymizer": {
-    "reason": "PyPI rsna-anonymizer 18.0.7 requires Python >=3.12,<3.13; only Python 3.11 is registered locally.",
-    "status": "blocked"
+    "command_wrapper": "validation/codex/external/rsna/run-rsna-anonymizer.cmd",
+    "python": "3.12.10",
+    "smoke_test": "rsna-anonymizer --help succeeded",
+    "status": "installed",
+    "version": "18.0.7"
+  },
+  "official_midi_validator": {
+    "command_wrapper": "validation/codex/external/midi-validator.cmd",
+    "dependencies": "Installed in D:/CodexExternal/venvs/midi-validation-311 from the CBIIT requirements.txt file.",
+    "repository": "https://github.com/CBIIT/MIDI_validation_script",
+    "repository_commit": "5273eb7e4a560c68b3da2bb22bb31a58ca689e17",
+    "smoke_test": "Imported run_validation, run_reports, and run_dciodvfy under Python 3.11.9.",
+    "status": "available_not_executed"
+  },
+  "midi_b_public_resources": {
+    "inventory": "validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json",
+    "local_root": "D:/CodexExternal/MIDI-B",
+    "public_files_downloaded": 6,
+    "status": "manifests_and_mappings_acquired",
+    "unresolved": [
+      "DICOM corpus not downloaded from the .tcia manifests",
+      "Faspex answer-key SQLite database not downloaded"
+    ]
+  },
+  "ibm_aspera": {
+    "ascp_path": "C:/Program Files/IBM Aspera/transferd/bin/ascp.exe",
+    "smoke_test": "ascp -A succeeded",
+    "status": "installed",
+    "version": "4.4.7.2245"
   },
   "orthanc": {
     "container_lifecycle": {
       "evidence_collected_while_running": true,
       "stopped_after_evidence_collection": true,
-      "stopped_at_utc": "2026-06-20T23:45:10Z"
+      "stopped_at_utc": "2026-06-21T03:25:10Z"
     },
     "docker_image": "orthancteam/orthanc:26.6.0",
     "docker_repo_digest": "orthancteam/orthanc@sha256:510ef4ce24699104244b00d2b93350a801fc2f1c6b0bfc6a1f15e546bff2d1f4",
@@ -74,35 +103,33 @@
     "missing_required_checks": [
       "midi_b_corpus",
       "midi_b_answer_key",
+      "blinded_reviewers"
+    ],
+    "ready": 7,
+    "ready_checks": [
       "official_validator",
       "rsna_anonymizer",
       "rsna_ctp",
-      "blinded_reviewers"
-    ],
-    "ready": 4,
-    "ready_checks": [
       "orthanc_http",
       "orthanc_dimse",
       "dicomweb",
       "credentials"
     ],
-    "required_ready": 4,
+    "required_ready": 7,
     "required_total": 10,
     "status": "blocked",
     "total": 10
   },
   "remaining_blockers": [
-    "MIDI-B corpus/answer keys/mappings were not downloaded or supplied. Local free space after downloads was 3,699,666,944 bytes, below the observed 7.63 GB validation download alone.",
-    "Official MIDI-B validator and official challenge scoring access were not supplied.",
+    "MIDI-B DICOM corpus and answer-key SQLite databases were not downloaded. Public TCIA manifests and mapping CSVs were acquired and hashed, but they are not substitutes for the corpus and answer database.",
     "Synapse challenge remains closed and any restricted/test-phase access must come from authorized project-owner credentials or access grants.",
-    "Modern RSNA Anonymizer was not installed because the local Python runtime is 3.11 and the package requires Python >=3.12,<3.13.",
-    "RSNA CTP was downloaded and extracted but did not present a runnable directory anonymizer pipeline; Runner.jar -help throws NullPointerException.",
+    "RSNA CTP was downloaded, extracted, and made command-discoverable, but it still does not present a verified runnable directory anonymizer pipeline; Runner.jar -help throws NullPointerException.",
     "Two independent blinded human reviewers and an adjudicator were not supplied.",
     "Institutional endpoints, authorization letters, native GitHub runner provenance, and code-signing/notarization credentials were not supplied."
   ],
   "rsna_dat": {
     "command_wrapper": "validation/codex/external/rsna/run-dat.cmd {input} {output}",
-    "ctp_probe": "CTP Runner.jar -help throws NullPointerException before help output; CTP is acquired but not configured/executed.",
+    "ctp_probe": "CTP command wrapper is discoverable for preflight. Runner.jar -help still throws NullPointerException before help output; CTP is acquired but not configured/executed.",
     "installer_hashes_sha256": {
       "Anonymizer-installer.jar": "F48D552AABDF5685306F08574134E14982E02D54F9E6156A55B801CF71C74B81",
       "CTP-installer.jar": "D5B4324B52924F24F67C3BDC5DC711D8AE35DC3BF17148BC41CFF5589FAB08FB",
@@ -179,12 +206,32 @@
     {
       "name": "RSNA Anonymizer PyPI",
       "url": "https://pypi.org/project/rsna-anonymizer/",
-      "used_for": "Confirmed latest package metadata, release date, Python >=3.12,<3.13 requirement, hashes, and provenance metadata."
+      "used_for": "Confirmed package metadata, release date, Python >=3.12,<3.13 requirement, hashes, and provenance metadata."
+    },
+    {
+      "name": "RSNA Anonymizer source metadata",
+      "url": "https://github.com/RSNA/anonymizer/blob/master/pyproject.toml",
+      "used_for": "Confirmed package version 18.0.7, Python >=3.12,<3.13 requirement, and rsna-anonymizer console entry point."
     },
     {
       "name": "NBIA Toolkit documentation",
       "url": "https://nbia-toolkit.readthedocs.io/en/latest/",
       "used_for": "Confirmed programmatic NBIA/TCIA access paths and Guest/OAuth access distinction."
+    },
+    {
+      "name": "TCIA/NBIA Data Retriever CLI documentation",
+      "url": "https://wiki.cancerimagingarchive.net/display/NBIA/NBIA+Data+Retriever+Command-Line+Interface+Guide",
+      "used_for": "Confirmed that .tcia manifests are handled by the NBIA/TCIA Data Retriever command-line workflow."
+    },
+    {
+      "name": "CBIIT MIDI validation script",
+      "url": "https://github.com/CBIIT/MIDI_validation_script",
+      "used_for": "Cloned the public official validation script source and installed its Python dependencies."
+    },
+    {
+      "name": "IBM Aspera Faspex package download API documentation",
+      "url": "https://www.ibm.com/docs/en/aspera-faspex/5.0?topic=packages-downloading-package-connect",
+      "used_for": "Confirmed Faspex package downloads require a bearer token and package transfer-spec request before Aspera transfer."
     }
   ]
 }

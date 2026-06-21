@@ -17,6 +17,6 @@
 ## D-003: External campaign phases blocked
 
 - Status: blocked
-- Description: Required external corpora, official validator, live tools, reviewers, institutional authorization, native runners, and signing credentials were not supplied.
-- Resolution: Per protocol, no external performance, review, institutional, signing, or notarization claims are made.
-- Evidence: `validation/codex/RESOURCE_STATUS.md`, `validation/codex/BLOCKERS.md`
+- Description: The actual MIDI-B DICOM corpus, MIDI-B answer-key database, reviewers, institutional authorization, native runners, and signing credentials were not supplied. Public validator/anonymizer/transfer tooling was later acquired and smoke-tested.
+- Resolution: Per protocol, no MIDI-B corpus performance, human-review, institutional, signing, or notarization claims are made.
+- Evidence: `validation/codex/RESOURCE_STATUS.md`, `validation/codex/BLOCKERS.md`, `validation/codex/external-preflight-real-public.json`

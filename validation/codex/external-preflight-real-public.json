@@ -15,25 +15,25 @@
       "status": "missing"
     },
     {
-      "detail": "not configured",
-      "fingerprint": null,
+      "detail": "configured resource available",
+      "fingerprint": "37fe98967470aeeed0d643443dbfe5f7bca8f942110ccb6d5b38e82ea24db654",
       "name": "official_validator",
       "required": true,
-      "status": "missing"
+      "status": "ready"
     },
     {
-      "detail": "not configured",
-      "fingerprint": null,
+      "detail": "configured resource available",
+      "fingerprint": "b49e844220efa5c1b4c06e20de309c03dfa3c34a48f6f40fd3edf414c6ca25e5",
       "name": "rsna_anonymizer",
       "required": true,
-      "status": "missing"
+      "status": "ready"
     },
     {
-      "detail": "not configured",
-      "fingerprint": null,
+      "detail": "configured resource available",
+      "fingerprint": "ad963903381f661dc5964e911af674080f446bbdf3755405ef0930e048a08cff",
       "name": "rsna_ctp",
       "required": true,
-      "status": "missing"
+      "status": "ready"
     },
     {
       "detail": "HTTP 200: http://127.0.0.1:8042/system",
@@ -76,16 +76,16 @@
     "Inventory fingerprints cover relative paths and file sizes; use content mode for byte-level corpus identity.",
     "Institutional authorization and data-use approvals must be verified outside this tool."
   ],
-  "ready": 4,
-  "required_ready": 4,
+  "ready": 7,
+  "required_ready": 7,
   "required_total": 10,
   "resource_lock": {
     "changed": {},
     "missing": [],
     "schema_version": "1.0",
     "status": "verified",
-    "total": 0,
-    "verified": 0
+    "total": 3,
+    "verified": 3
   },
   "schema_version": "1.0",
   "status": "blocked",

@@ -82,6 +82,27 @@
     "No trusted signing or notarization claim",
     "No HIPAA, GDPR, PS3.15, clinical-safety, or regulatory certification claim"
   ],
+  "post_release_external_addendum": {
+    "generated_at_utc": "2026-06-21T03:25:10Z",
+    "evidence": [
+      "validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md",
+      "validation/codex/external/REAL_EXTERNAL_SOURCES_RECORD.json",
+      "validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json",
+      "validation/codex/external-preflight-real-public.json"
+    ],
+    "preflight": {
+      "status": "blocked",
+      "ready": 7,
+      "required_ready": 7,
+      "required_total": 10,
+      "missing_required": [
+        "midi_b_corpus",
+        "midi_b_answer_key",
+        "blinded_reviewers"
+      ]
+    },
+    "claim_boundary": "Packaged v0.7.2 artifacts were not rebuilt by this addendum; official MIDI-B corpus validation and human review are still not claimed."
+  },
   "external_preflight": {
     "evidence": "validation/codex/external-preflight-public.json",
     "missing_required": [
