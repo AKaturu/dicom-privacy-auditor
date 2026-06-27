@@ -180,9 +180,9 @@ jobs:
           dist/native/DICOMPrivacyAuditor-CLI external --help > /dev/null
           dist/native/DICOMPrivacyAuditor-CLI demo --help > /dev/null
           dist/native/DICOMPrivacyAuditor-CLI report --help > /dev/null
-          if [ -x dist/native/DICOMPrivacyAuditor ]; then
+          if [ -f dist/native/DICOMPrivacyAuditor ] && [ -x dist/native/DICOMPrivacyAuditor ]; then
             dist/native/DICOMPrivacyAuditor --self-check
-          elif [ -x dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor ]; then
+          elif [ -f dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor ] && [ -x dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor ]; then
             dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor --self-check
           else
             echo "Desktop executable not found"
@@ -255,6 +255,7 @@ jobs:
 
       - name: Attest platform archive SBOM
         if: github.event.repository.visibility == 'public'
+        continue-on-error: true
         uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b  # v2.4.0
         with:
           subject-checksums: dist/release/SHA256SUMS-${{ runner.os }}-${{ runner.arch }}.txt
