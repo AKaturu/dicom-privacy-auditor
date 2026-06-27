@@ -37,6 +37,7 @@ dev = [
   "ruff>=0.6,<1.0",
   "mypy>=1.11,<3.0",
   "types-requests>=2.32,<3.0",
+  "tomli>=2.0,<3.0; python_version < '3.11'",
   "bandit>=1.8,<2.0",
   "hypothesis>=6.100,<7.0",
   "twine>=5.1,<7.0",
@@ -108,7 +109,7 @@ where = ["src"]
 dicom_privacy_auditor = ["schemas/*.json"]
 
 [tool.mypy]
-python_version = "3.10"
+python_version = "3.12"
 files = ["src/dicom_privacy_auditor"]
 ignore_missing_imports = true
 warn_unused_configs = true
@@ -118,6 +119,7 @@ show_error_codes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["."]
 addopts = "-q --strict-markers --basetemp=.pytest-tmp"
 
 [tool.ruff]

@@ -7,7 +7,10 @@ import argparse
 import re
 from pathlib import Path
 
-import tomllib
+try:
+    import tomllib
+except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10
+    import tomli as tomllib
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
 
