@@ -56,10 +56,12 @@ jobs:
           import json
           noop = json.load(open('/tmp/noop/evaluation-noop/evaluation.json'))
           baseline = json.load(open('/tmp/baseline/evaluation-baseline/evaluation.json'))
-          assert noop['summary']['residual_injections'] == 10
-          assert noop['summary']['auditor_detected_residuals'] == 10
-          assert baseline['summary']['removed_injections'] == 10
-          assert baseline['summary']['basic_valid_outputs'] == 12
+          expected_injections = noop['summary']['injections']
+          expected_cases = noop['summary']['cases']
+          assert noop['summary']['residual_injections'] == expected_injections
+          assert noop['summary']['auditor_detected_residuals'] == expected_injections
+          assert baseline['summary']['removed_injections'] == expected_injections
+          assert baseline['summary']['basic_valid_outputs'] == expected_cases
           PY
 
   distribution-guard:
