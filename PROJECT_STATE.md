@@ -76,6 +76,16 @@ GitHub owner metadata, CODEOWNERS, citation metadata, and security documentation
 
 Validated with `pip-audit --skip-editable --desc on`, Ruff, Ruff format check, mypy, targeted regression tests, and the full suite under pytest 9: `163 passed, 7 skipped`, coverage `85.77%`.
 
+### GitHub Presentation Polish
+
+#### Validation
+
+The README now includes status badges, a repository guide, an explicit quality-gate table, contribution/security links, and package metadata URLs for GitHub, documentation, repository, and issues.
+
+#### Tests Added
+
+No source tests were added; this was documentation and package metadata polish.
+
 ## Current Work
 
 ### Active Feature
@@ -84,7 +94,7 @@ GitHub publication.
 
 ### Progress
 
-Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub.
+Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub. Repository presentation polish has also been completed for the public GitHub page.
 
 ### Remaining Work
 

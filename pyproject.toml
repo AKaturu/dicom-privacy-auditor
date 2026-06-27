@@ -99,6 +99,8 @@ dicom-privacy-report = "dicom_privacy_auditor.publication.cli:main"
 dicom-privacy-external = "dicom_privacy_auditor.external_validation:main"
 
 [project.urls]
+Homepage = "https://github.com/AKaturu/dicom-privacy-auditor"
+Documentation = "https://github.com/AKaturu/dicom-privacy-auditor#readme"
 Repository = "https://github.com/AKaturu/dicom-privacy-auditor"
 Issues = "https://github.com/AKaturu/dicom-privacy-auditor/issues"
 
