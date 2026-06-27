@@ -21,6 +21,7 @@ The primary experimental unit is one injected identifier instance. Each injected
 | UID | Study, series, frame, or SOP instance UID | Original synthetic UID remains |
 | Pixel annotation | Rendered synthetic MRN | Source and output region retain high correlation and local contrast |
 | Overlay graphics | Group 6000 overlay data | Artificial overlay payload remains in `OverlayData` |
+| DICOMDIR reference | Group 0004 file-set metadata | Artificial file-set token remains in directory/file-set attributes |
 | File Meta Information | Source Application Entity Title | Exact artificial token remains in File Meta Information |
 | Preamble | Artificial ASCII preamble token | Token remains in the first 128 bytes |
 
@@ -59,7 +60,7 @@ Missing or unreadable outputs are treated conservatively as unsuccessful removal
 - Structured reports and presentation states
 - Advanced graphics beyond the initial overlay-data stratum
 - Encapsulated PDF/CDA content
-- DICOMDIR and companion-manifest leakage
+- Companion-manifest leakage beyond the implemented group 0004 DICOMDIR-reference stratum
 - Cross-object UID consistency
 - Clinical-utility preservation metrics
 - Multi-vendor external validation

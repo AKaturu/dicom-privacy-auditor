@@ -33,6 +33,7 @@ DETECTION_CODES: dict[str, set[str]] = {
         "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
     },
     "overlay_graphics": {"EMBEDDED_CONTENT_REVIEW", "SOURCE_VALUE_RETAINED"},
+    "dicomdir_reference": {"DIRECTORY_RECORD_ATTRIBUTE_PRESENT", "SOURCE_VALUE_RETAINED"},
     "file_meta": {"FILE_META_IDENTITY_PRESENT", "SOURCE_VALUE_RETAINED"},
     "preamble": {"NONZERO_PREAMBLE_REVIEW"},
 }
@@ -168,6 +169,8 @@ def _is_residual(
             if injection.value.encode("ascii") in raw_value:
                 return True, None, None
         return False, None, None
+    if injection.location_kind == "dicomdir_element":
+        return _dataset_contains(dataset, injection.value), None, None
     return _dataset_contains(dataset, injection.value), None, None
 
 

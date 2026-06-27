@@ -108,6 +108,14 @@ Complete for all tasks possible without private or governed external resources. 
 
 Roadmap analysis has started across the GitHub repositories. The first implemented roadmap item is the DICOM Privacy Auditor synthetic benchmark overlay-graphics stratum.
 
+### Benchmark DICOMDIR-Reference Roadmap Item
+
+The synthetic benchmark now includes a `dicomdir_reference` stratum for group 0004 file-set metadata leakage inside ordinary benchmark objects. The evaluator checks retained artificial file-set tokens, the auditor detects group 0004 directory/file-set attributes, and the benchmark-aware baseline removes group 0004 elements.
+
+#### Validation
+
+`tests/test_benchmark.py` now verifies DICOMDIR-reference stratum generation. Full validation passed after installing the local dev test dependencies that were missing in the active interpreter: `python -m pytest -q` and `python -m ruff check src tests docs`.
+
 ### Remaining Work
 
 Official external validation cannot be marked complete until the missing governed resources are supplied and run according to `STUDY_PROTOCOL.md`.

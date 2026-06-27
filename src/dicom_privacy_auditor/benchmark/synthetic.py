@@ -27,6 +27,7 @@ STRATA = (
     "uid",
     "pixel_annotation",
     "overlay_graphics",
+    "dicomdir_reference",
     "file_meta",
     "preamble",
 )
@@ -55,6 +56,7 @@ def _synthetic_token(case_index: int, kind: str) -> str:
         "private": f"SYNTHETIC PRIVATE ROUTING {case_index:04d}",
         "pixel": f"SYN-MRN-{case_index:06d}",
         "overlay": f"SYN-OVERLAY-{case_index:06d}",
+        "dicomdir": f"SYNFSET{case_index:06d}",
         "aet": f"SYN_AET_{case_index:04d}",
         "preamble": f"SYNTHETIC-PREAMBLE-{case_index:04d}",
     }
@@ -313,6 +315,22 @@ def _inject_file_meta(ds: FileDataset, case_id: str, index: int, variant: int) -
     )
 
 
+def _inject_dicomdir_reference(ds: FileDataset, case_id: str, index: int, variant: int) -> Injection:
+    value = _synthetic_token(index, "dicomdir")
+    ds.FileSetID = value
+    element = _required_element(ds, "FileSetID")
+    return _injection(
+        case_id,
+        "dicomdir_reference",
+        "dicomdir_element",
+        "root/FileSetID",
+        value,
+        keyword="FileSetID",
+        tag=str(element.tag),
+        description="Artificial identifier in group 0004 file-set metadata",
+    )
+
+
 def _inject_preamble(ds: FileDataset, case_id: str, index: int, variant: int) -> Injection:
     value = _synthetic_token(index, "preamble")
     payload = value.encode("ascii")[:128]
@@ -337,6 +355,7 @@ INJECTORS: dict[str, Callable[[FileDataset, str, int, int], Injection]] = {
     "uid": _inject_uid,
     "pixel_annotation": _inject_pixel,
     "overlay_graphics": _inject_overlay_graphics,
+    "dicomdir_reference": _inject_dicomdir_reference,
     "file_meta": _inject_file_meta,
     "preamble": _inject_preamble,
 }

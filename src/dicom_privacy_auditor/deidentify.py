@@ -27,6 +27,7 @@ class DeidentificationStats:
     cleaned_text: int = 0
     removed_private: int = 0
     removed_graphics: int = 0
+    removed_directory_records: int = 0
     cleared_dates: int = 0
     remapped_uids: int = 0
     pixel_regions_cleaned: int = 0
@@ -38,6 +39,7 @@ class DeidentificationStats:
             "cleaned_text": self.cleaned_text,
             "removed_private": self.removed_private,
             "removed_graphics": self.removed_graphics,
+            "removed_directory_records": self.removed_directory_records,
             "cleared_dates": self.cleared_dates,
             "remapped_uids": self.remapped_uids,
             "pixel_regions_cleaned": self.pixel_regions_cleaned,
@@ -78,6 +80,10 @@ def _clean_elements(dataset: Dataset, mapper: UIDMapper, stats: Deidentification
         if element.VR == "SQ":
             for item in element.value:
                 _clean_elements(item, mapper, stats)
+            continue
+        if element.tag.group == 0x0004:
+            del dataset[element.tag]
+            stats.removed_directory_records += 1
             continue
         if _is_overlay_or_graphic_element(element):
             del dataset[element.tag]

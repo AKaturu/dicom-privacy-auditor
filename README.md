@@ -5,7 +5,7 @@
 [![Python](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating de-identification workflows across metadata, nested sequences, private attributes, filenames, UIDs, dates, File Meta Information, preambles, and burned-in pixel annotations.
+A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating de-identification workflows across metadata, nested sequences, private attributes, filenames, UIDs, dates, DICOMDIR-like references, File Meta Information, preambles, overlays, and burned-in pixel annotations.
 
 > **Research prototype—not a compliance certificate.** This repository does not prove compliance with DICOM PS3.15, HIPAA, GDPR, or institutional policy. A file with zero findings is not proven safe for release. The built-in de-identifier is a transparent benchmark baseline, not a production de-identification engine.
 
