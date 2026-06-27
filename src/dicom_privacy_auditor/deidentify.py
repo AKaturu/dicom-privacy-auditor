@@ -12,7 +12,13 @@ from pydicom.dataset import Dataset
 from pydicom.multival import MultiValue
 from pydicom.uid import UID
 
-from .profiles import DATE_TIME_KEYWORDS, DIRECT_IDENTIFIER_KEYWORDS, FREE_TEXT_KEYWORDS, SAFE_UID_KEYWORDS
+from .profiles import (
+    DATE_TIME_KEYWORDS,
+    DIRECT_IDENTIFIER_KEYWORDS,
+    FREE_TEXT_KEYWORDS,
+    GRAPHIC_OR_EMBEDDED_KEYWORDS,
+    SAFE_UID_KEYWORDS,
+)
 
 
 @dataclass
@@ -20,6 +26,7 @@ class DeidentificationStats:
     cleared_identifiers: int = 0
     cleaned_text: int = 0
     removed_private: int = 0
+    removed_graphics: int = 0
     cleared_dates: int = 0
     remapped_uids: int = 0
     pixel_regions_cleaned: int = 0
@@ -30,6 +37,7 @@ class DeidentificationStats:
             "cleared_identifiers": self.cleared_identifiers,
             "cleaned_text": self.cleaned_text,
             "removed_private": self.removed_private,
+            "removed_graphics": self.removed_graphics,
             "cleared_dates": self.cleared_dates,
             "remapped_uids": self.remapped_uids,
             "pixel_regions_cleaned": self.pixel_regions_cleaned,
@@ -60,11 +68,20 @@ def _is_class_or_encoding_uid(element: DataElement) -> bool:
     return keyword in SAFE_UID_KEYWORDS or keyword.endswith("ClassUID") or keyword == "TransferSyntaxUID"
 
 
+def _is_overlay_or_graphic_element(element: DataElement) -> bool:
+    keyword = element.keyword or ""
+    return keyword in GRAPHIC_OR_EMBEDDED_KEYWORDS or 0x6000 <= element.tag.group <= 0x60FF
+
+
 def _clean_elements(dataset: Dataset, mapper: UIDMapper, stats: DeidentificationStats) -> None:
     for element in list(dataset):
         if element.VR == "SQ":
             for item in element.value:
                 _clean_elements(item, mapper, stats)
+            continue
+        if _is_overlay_or_graphic_element(element):
+            del dataset[element.tag]
+            stats.removed_graphics += 1
             continue
         if element.tag.is_private:
             del dataset[element.tag]

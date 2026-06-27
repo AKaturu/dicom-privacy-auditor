@@ -86,6 +86,16 @@ The README now includes status badges, a repository guide, an explicit quality-g
 
 No source tests were added; this was documentation and package metadata polish.
 
+### Benchmark Overlay Graphics Roadmap Item
+
+#### Validation
+
+The synthetic benchmark now includes an `overlay_graphics` stratum for group 6000 overlay-data leakage. The evaluator checks whether the artificial overlay payload remains, the auditor detects retained overlay content through embedded-content review findings, and the built-in baseline removes overlay/graphic elements.
+
+#### Tests Added
+
+`tests/test_benchmark.py` now verifies overlay stratum generation. The existing no-op and baseline end-to-end benchmark test covers retained-overlay detection and baseline removal across the expanded stratum set.
+
 ## Current Work
 
 ### Active Feature
@@ -95,6 +105,8 @@ GitHub publication.
 ### Progress
 
 Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub. Repository presentation polish has also been completed for the public GitHub page.
+
+Roadmap analysis has started across the GitHub repositories. The first implemented roadmap item is the DICOM Privacy Auditor synthetic benchmark overlay-graphics stratum.
 
 ### Remaining Work
 

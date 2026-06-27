@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 
+from dicom_privacy_auditor.benchmark.synthetic import STRATA
 from dicom_privacy_auditor.demo import run_demo
 from dicom_privacy_auditor.dicomweb.client import DicomwebClient, DicomwebConfig, DicomwebError
 from dicom_privacy_auditor.jsonio import ReportValidationError, load_schema, validate_json_file, write_json
@@ -74,8 +75,8 @@ def test_dicomweb_repeated_page_and_malformed_multipart(monkeypatch: pytest.Monk
 def test_complete_demo_and_publication_package(tmp_path: Path) -> None:
     result = run_demo(tmp_path / "demo", cases_per_stratum=1, clean_controls=1, overwrite=True, plots=False)
     root = tmp_path / "demo"
-    assert result["summary"]["noop"]["residual_injections"] == 10
-    assert result["summary"]["baseline"]["removed_injections"] == 10
+    assert result["summary"]["noop"]["residual_injections"] == len(STRATA)
+    assert result["summary"]["baseline"]["removed_injections"] == len(STRATA)
     assert (root / "human-review.db").is_file()
     assert (root / "publication" / "MANUSCRIPT_REPORT.md").is_file()
     assert (root / "publication" / "tables" / "table_overall.tex").is_file()
