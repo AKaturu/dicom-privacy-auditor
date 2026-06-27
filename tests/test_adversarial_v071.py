@@ -95,10 +95,10 @@ def test_atomic_json_preserves_previous_file_when_replace_fails(
     destination = tmp_path / "result.json"
     destination.write_text('{"state":"old"}\n', encoding="utf-8")
 
-    def fail_replace(source: str | os.PathLike[str], target: str | os.PathLike[str]) -> None:
+    def fail_replace(source: Path, target: str | os.PathLike[str]) -> None:
         raise OSError("simulated crash")
 
-    monkeypatch.setattr(os, "replace", fail_replace)
+    monkeypatch.setattr(Path, "replace", fail_replace)
     with pytest.raises(OSError, match="simulated crash"):
         write_json(destination, {"state": "new"})
     assert json.loads(destination.read_text(encoding="utf-8")) == {"state": "old"}
