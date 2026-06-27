@@ -30,7 +30,7 @@ Verify a public GitHub attestation with the GitHub CLI:
 
 ```bash
 gh attestation verify DICOMPrivacyAuditor-RELEASE-ARCHIVE \
-  --repo krishna2006sai/dicom-privacy-auditor
+  --repo AKaturu/dicom-privacy-auditor
 ```
 
 Checksums and attestations establish artifact integrity and build provenance. They do not replace Windows Authenticode signing or Apple Developer ID signing/notarization.

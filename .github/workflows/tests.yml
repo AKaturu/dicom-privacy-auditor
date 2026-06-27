@@ -36,7 +36,7 @@ jobs:
       - run: ruff format --check .
       - run: mypy
       - run: python -m compileall -q src scripts tests
-      - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
+      - run: PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p pytest_cov --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
 
   benchmark-smoke:
     runs-on: ubuntu-24.04

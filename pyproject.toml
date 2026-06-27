@@ -98,8 +98,8 @@ dicom-privacy-report = "dicom_privacy_auditor.publication.cli:main"
 dicom-privacy-external = "dicom_privacy_auditor.external_validation:main"
 
 [project.urls]
-Repository = "https://github.com/krishna2006sai/dicom-privacy-auditor"
-Issues = "https://github.com/krishna2006sai/dicom-privacy-auditor/issues"
+Repository = "https://github.com/AKaturu/dicom-privacy-auditor"
+Issues = "https://github.com/AKaturu/dicom-privacy-auditor/issues"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -118,7 +118,7 @@ show_error_codes = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-q --strict-markers"
+addopts = "-q --strict-markers --basetemp=.pytest-tmp"
 
 [tool.ruff]
 line-length = 110

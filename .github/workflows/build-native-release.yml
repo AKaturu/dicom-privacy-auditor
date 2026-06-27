@@ -61,7 +61,7 @@ jobs:
           ruff format --check .
           mypy
           bandit -q -r src scripts -ll
-          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
+          PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 pytest -p pytest_cov --cov=dicom_privacy_auditor --cov-report=term-missing --cov-fail-under=82
 
       - name: Create isolated native build environment
         shell: bash

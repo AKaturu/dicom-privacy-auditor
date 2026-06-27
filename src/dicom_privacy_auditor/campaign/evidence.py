@@ -268,6 +268,7 @@ def _extract_evidence_archive(
     max_members: int,
     max_uncompressed_bytes: int,
 ) -> None:
+    destination = destination.resolve()
     members: list[tarfile.TarInfo] = []
     names: set[str] = set()
     uncompressed_bytes = 0

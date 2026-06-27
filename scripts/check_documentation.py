@@ -19,8 +19,10 @@ def main() -> int:
     broken: list[str] = []
     commands: set[str] = set()
     for doc in sorted(root.rglob("*.md")):
+        relative_parts = doc.relative_to(root).parts
         if any(
-            part.startswith(".") or part in {"build", "dist", ".venv", "site-packages"} for part in doc.parts
+            part.startswith(".") or part in {"build", "dist", ".venv", "site-packages"}
+            for part in relative_parts
         ):
             continue
         text = doc.read_text(encoding="utf-8")

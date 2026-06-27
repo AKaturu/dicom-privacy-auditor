@@ -12,7 +12,7 @@ Complete every locally possible validation/release/demo task while preserving th
 
 ### Current Status
 
-Local v0.7.2 release gate passed, final validation evidence was packaged, synthetic demo screenshots/video were captured, and real public external sources were acquired/executed where possible. The real external preflight is now 7 of 10 required checks ready. Full external validation remains blocked because the actual MIDI-B DICOM corpus, MIDI-B answer-key database, independent reviewers, institutional authorization, native runners, and signing credentials were not supplied.
+Local v0.7.2 release gate passed, final validation evidence was packaged, synthetic demo screenshots/video were captured, real public external sources were acquired/executed where possible, and the project was prepared for publication under `AKaturu/dicom-privacy-auditor`. The real external preflight is now 7 of 10 required checks ready. Full external validation remains blocked because the actual MIDI-B DICOM corpus, MIDI-B answer-key database, independent reviewers, institutional authorization, native runners, and signing credentials were not supplied.
 
 ## Completed Features
 
@@ -66,15 +66,25 @@ README and docs now make the public GitHub path synthetic-first: demos, screensh
 
 No source tests added; documentation links, ignore rules, and claim boundaries were validated with text searches and git status checks.
 
+### GitHub Publication Prep
+
+#### Validation
+
+GitHub owner metadata, CODEOWNERS, citation metadata, and security documentation now point at `AKaturu/dicom-privacy-auditor`. Pytest uses a repository-local temporary directory for clean clone/Windows reliability, GitHub workflows explicitly load `pytest-cov` while plugin autoload is disabled, and Windows path handling was hardened in evidence archive verification plus documentation checking.
+
+#### Tests Added
+
+Validated with Ruff, Ruff format check, mypy, targeted regression tests, and the full suite: `163 passed, 7 skipped`, coverage `85.75%`.
+
 ## Current Work
 
 ### Active Feature
 
-None.
+GitHub publication.
 
 ### Progress
 
-Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions.
+Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub.
 
 ### Remaining Work
 
@@ -87,6 +97,7 @@ Official external validation cannot be marked complete until the missing governe
 3. Supply a working RSNA CTP directory pipeline if CTP execution must be claimed; command availability is ready, but pipeline execution is not.
 4. Supply independent reviewers/adjudicator, authorized institutional endpoints if applicable, native runner provenance, and signing/notary credentials if trusted signing is desired.
 5. Re-run external preflight and only then execute the official campaign and human review.
+6. After GitHub upload, confirm Actions status and configure any branch protection/secrets required for release automation.
 
 ## Risks
 
@@ -104,4 +115,4 @@ The Tk desktop UI was not captured because this Windows Python/Tk runtime previo
 
 ## Resume Instructions
 
-Start from the latest commit after the synthetic-first GitHub data-policy update. Review `README.md`, `docs/REAL_DATA_SETUP.md`, `docs/DEMO.md`, `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json` before making any external-validation claim changes.
+Start from the latest commit after the GitHub publication prep update. Review `README.md`, `docs/REAL_DATA_SETUP.md`, `docs/DEMO.md`, `validation/codex/final/FINAL_VALIDATION_REPORT.md`, `validation/codex/demo/media/DEMO_CAPTURE_REPORT.md`, `validation/codex/external/REAL_EXTERNAL_SOURCES_REPORT.md`, `validation/codex/external/MIDI_B_PUBLIC_RESOURCE_INVENTORY.json`, and `validation/codex/external-preflight-real-public.json` before making any external-validation claim changes.
