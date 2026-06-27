@@ -11,12 +11,16 @@ import os
 import platform
 import shutil
 import stat
+import sys
 import tarfile
 import time
 import zipfile
 from pathlib import Path
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - exercised on Python 3.10
+    import tomli as tomllib
 
 DEFAULT_SOURCE_DATE_EPOCH = 1781913600
 

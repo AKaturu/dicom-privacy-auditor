@@ -57,7 +57,7 @@ def test_dicomweb_repeated_page_and_malformed_multipart(monkeypatch: pytest.Monk
     class Response:
         ok = True
         status_code = 200
-        headers = {}
+        headers: dict[str, str] = {}
         content = b""
 
         def json(self):
