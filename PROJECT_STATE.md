@@ -70,11 +70,11 @@ No source tests added; documentation links, ignore rules, and claim boundaries w
 
 #### Validation
 
-GitHub owner metadata, CODEOWNERS, citation metadata, and security documentation now point at `AKaturu/dicom-privacy-auditor`. Pytest uses a repository-local temporary directory for clean clone/Windows reliability, GitHub workflows explicitly load `pytest-cov` while plugin autoload is disabled, and Windows path handling was hardened in evidence archive verification plus documentation checking.
+GitHub owner metadata, CODEOWNERS, citation metadata, and security documentation now point at `AKaturu/dicom-privacy-auditor`. Pytest uses a repository-local temporary directory for clean clone/Windows reliability, GitHub workflows explicitly load `pytest-cov` while plugin autoload is disabled, Python 3.10/3.13 CI compatibility was repaired, `pip-audit` skips the editable local project while still auditing dependencies, and Windows path handling was hardened in evidence archive verification plus documentation checking.
 
 #### Tests Added
 
-Validated with Ruff, Ruff format check, mypy, targeted regression tests, and the full suite: `163 passed, 7 skipped`, coverage `85.75%`.
+Validated with `pip-audit --skip-editable --desc on`, Ruff, Ruff format check, mypy, targeted regression tests, and the full suite under pytest 9: `163 passed, 7 skipped`, coverage `85.77%`.
 
 ## Current Work
 
