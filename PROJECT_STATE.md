@@ -96,6 +96,10 @@ Added `scripts/generate_demo_media.py`, `docs/DEMO_MEDIA.md`, and committed synt
 
 No source tests were added; the media generator is validated by executing it and verifying the generated assets.
 
+#### Follow-up Update
+
+The media generator now renders the complete final frame before encoding, preventing flicker in GitHub GIF/MP4 previews.
+
 ### Benchmark Overlay Graphics Roadmap Item
 
 #### Validation

@@ -140,7 +140,7 @@ def _pipeline_bar(
     )
 
 
-def _frame(summary: dict[str, Any], output: str, step: int) -> Image.Image:
+def _frame(summary: dict[str, Any], output: str) -> Image.Image:
     image = Image.new("RGB", (WIDTH, HEIGHT), "#0b1020")
     draw = ImageDraw.Draw(image)
     draw.rectangle((0, 0, WIDTH, 92), fill="#111827")
@@ -159,11 +159,10 @@ def _frame(summary: dict[str, Any], output: str, step: int) -> Image.Image:
         ("Metadata-only", "metadata-only", "#fbbf24"),
         ("Benchmark baseline", "baseline", "#34d399"),
     ]
-    for index, (label, key, color) in enumerate(pipelines[: step + 1]):
+    for index, (label, key, color) in enumerate(pipelines):
         _pipeline_bar(draw, 744, 270 + index * 112, label, summary[key], color)
 
-    if step >= 2:
-        _text(draw, (744, 600), "Review DB and publication package included.", FONT_SMALL, "#a7b4c8")
+    _text(draw, (744, 600), "Review DB and publication package included.", FONT_SMALL, "#a7b4c8")
     return image
 
 
@@ -189,7 +188,8 @@ def main() -> int:
 
     output = _run_demo(args.workspace)
     summary = json.loads((args.workspace / "summary.json").read_text(encoding="utf-8"))
-    frames = [_frame(summary, output, step) for step in range(3)]
+    frame = _frame(summary, output)
+    frames = [frame.copy() for _ in range(4)]
     _write_media(frames)
     print(f"Wrote {ASSETS / 'demo-poster.png'}")
     print(f"Wrote {ASSETS / 'demo.gif'}")
