@@ -180,7 +180,15 @@ jobs:
           dist/native/DICOMPrivacyAuditor-CLI external --help > /dev/null
           dist/native/DICOMPrivacyAuditor-CLI demo --help > /dev/null
           dist/native/DICOMPrivacyAuditor-CLI report --help > /dev/null
-          dist/native/DICOMPrivacyAuditor --self-check
+          if [ -f dist/native/DICOMPrivacyAuditor ] && [ -x dist/native/DICOMPrivacyAuditor ]; then
+            dist/native/DICOMPrivacyAuditor --self-check
+          elif [ -f dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor ] && [ -x dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor ]; then
+            dist/native/DICOMPrivacyAuditor.app/Contents/MacOS/DICOMPrivacyAuditor --self-check
+          else
+            echo "Desktop executable not found"
+            find dist/native -maxdepth 4 -print
+            exit 1
+          fi
           dist/native/DICOMPrivacyAuditor-CLI audit sample_data --json dist/native-smoke.json
           test -s dist/native-smoke.json
           test -s dist/ps315-smoke.json
@@ -247,7 +255,8 @@ jobs:
 
       - name: Attest platform archive SBOM
         if: github.event.repository.visibility == 'public'
-        uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26  # v4.1.0
+        continue-on-error: true
+        uses: actions/attest-sbom@bd218ad0dbcb3e146bd073d1d9c6d78e08aa8a0b  # v2.4.0
         with:
           subject-checksums: dist/release/SHA256SUMS-${{ runner.os }}-${{ runner.arch }}.txt
           sbom-path: dist/release/SBOM-native-runtime-${{ runner.os }}-${{ runner.arch }}.cdx.json
@@ -276,6 +285,10 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
+      - uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5  # v4.3.1
+        with:
+          fetch-depth: 0
+
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4.3.0
         with:
           path: release
@@ -293,8 +306,17 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
-          gh release create "${GITHUB_REF_NAME}" release/* \
-            --draft \
-            --verify-tag \
-            --title "DICOM Privacy Auditor ${GITHUB_REF_NAME}" \
-            --notes "Native research-prototype builds for Windows, Linux, macOS Apple Silicon, and macOS Intel. Verify SHA-256 checksums, provenance attestations, SBOMs, and the per-platform SIGNATURE-STATUS files before running. Signing and notarization occur only when owner-controlled credentials are configured. These artifacts are not approved for clinical deployment."
+          notes="Native research-prototype builds for Windows, Linux, macOS Apple Silicon, and macOS Intel. Verify SHA-256 checksums, provenance attestations, SBOMs, and the per-platform SIGNATURE-STATUS files before running. Signing and notarization occur only when owner-controlled credentials are configured. These artifacts are not approved for clinical deployment."
+          if gh release view "${GITHUB_REF_NAME}" >/dev/null 2>&1; then
+            gh release upload "${GITHUB_REF_NAME}" release/* --clobber
+            gh release edit "${GITHUB_REF_NAME}" \
+              --draft \
+              --title "DICOM Privacy Auditor ${GITHUB_REF_NAME}" \
+              --notes "$notes"
+          else
+            gh release create "${GITHUB_REF_NAME}" release/* \
+              --draft \
+              --verify-tag \
+              --title "DICOM Privacy Auditor ${GITHUB_REF_NAME}" \
+              --notes "$notes"
+          fi

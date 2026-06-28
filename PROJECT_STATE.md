@@ -76,6 +76,40 @@ GitHub owner metadata, CODEOWNERS, citation metadata, and security documentation
 
 Validated with `pip-audit --skip-editable --desc on`, Ruff, Ruff format check, mypy, targeted regression tests, and the full suite under pytest 9: `163 passed, 7 skipped`, coverage `85.77%`.
 
+### GitHub Presentation Polish
+
+#### Validation
+
+The README now includes status badges, a repository guide, an explicit quality-gate table, contribution/security links, and package metadata URLs for GitHub, documentation, repository, and issues.
+
+#### Tests Added
+
+No source tests were added; this was documentation and package metadata polish.
+
+### GitHub Demo Media Refresh
+
+#### Validation
+
+Added `scripts/generate_demo_media.py`, `docs/DEMO_MEDIA.md`, and committed synthetic-only poster, GIF, and MP4 assets under `docs/assets/`. The generator runs `dicom-privacy-demo`, reads the real synthetic benchmark summary, and renders GitHub-ready media without committing DICOM objects or generated workspaces.
+
+#### Tests Added
+
+No source tests were added; the media generator is validated by executing it and verifying the generated assets.
+
+#### Follow-up Update
+
+The media generator now renders the complete final frame before encoding, preventing flicker in GitHub GIF/MP4 previews.
+
+### Benchmark Overlay Graphics Roadmap Item
+
+#### Validation
+
+The synthetic benchmark now includes an `overlay_graphics` stratum for group 6000 overlay-data leakage. The evaluator checks whether the artificial overlay payload remains, the auditor detects retained overlay content through embedded-content review findings, and the built-in baseline removes overlay/graphic elements.
+
+#### Tests Added
+
+`tests/test_benchmark.py` now verifies overlay stratum generation. The existing no-op and baseline end-to-end benchmark test covers retained-overlay detection and baseline removal across the expanded stratum set.
+
 ## Current Work
 
 ### Active Feature
@@ -84,7 +118,17 @@ GitHub publication.
 
 ### Progress
 
-Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub.
+Complete for all tasks possible without private or governed external resources. Public Orthanc and RSNA DAT workflows were executed on synthetic data, real public MIDI-B manifest/mapping files were acquired, official validator/anonymizer command availability is wired into preflight, and the GitHub-facing workflow now defaults clearly to synthetic demonstrations with separate real-data setup instructions. Publication prep has passed local validation and is ready to push to GitHub. Repository presentation polish has also been completed for the public GitHub page.
+
+Roadmap analysis has started across the GitHub repositories. The first implemented roadmap item is the DICOM Privacy Auditor synthetic benchmark overlay-graphics stratum.
+
+### Benchmark DICOMDIR-Reference Roadmap Item
+
+The synthetic benchmark now includes a `dicomdir_reference` stratum for group 0004 file-set metadata leakage inside ordinary benchmark objects. The evaluator checks retained artificial file-set tokens, the auditor detects group 0004 directory/file-set attributes, and the benchmark-aware baseline removes group 0004 elements.
+
+#### Validation
+
+`tests/test_benchmark.py` now verifies DICOMDIR-reference stratum generation. Full validation passed after installing the local dev test dependencies that were missing in the active interpreter: `python -m pytest -q` and `python -m ruff check src tests docs`.
 
 ### Remaining Work
 

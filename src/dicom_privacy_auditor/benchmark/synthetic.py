@@ -26,6 +26,8 @@ STRATA = (
     "temporal",
     "uid",
     "pixel_annotation",
+    "overlay_graphics",
+    "dicomdir_reference",
     "file_meta",
     "preamble",
 )
@@ -53,6 +55,8 @@ def _synthetic_token(case_index: int, kind: str) -> str:
         "uid": deterministic_uid(f"injected:{case_index}"),
         "private": f"SYNTHETIC PRIVATE ROUTING {case_index:04d}",
         "pixel": f"SYN-MRN-{case_index:06d}",
+        "overlay": f"SYN-OVERLAY-{case_index:06d}",
+        "dicomdir": f"SYNFSET{case_index:06d}",
         "aet": f"SYN_AET_{case_index:04d}",
         "preamble": f"SYNTHETIC-PREAMBLE-{case_index:04d}",
     }
@@ -274,6 +278,29 @@ def _inject_pixel(ds: FileDataset, case_id: str, index: int, variant: int) -> In
     )
 
 
+def _inject_overlay_graphics(ds: FileDataset, case_id: str, index: int, variant: int) -> Injection:
+    value = _synthetic_token(index, "overlay")
+    group = 0x6000
+    ds.add_new((group, 0x0010), "US", int(ds.Rows))
+    ds.add_new((group, 0x0011), "US", int(ds.Columns))
+    ds.add_new((group, 0x0040), "CS", "G")
+    ds.add_new((group, 0x0050), "SS", [1, 1])
+    ds.add_new((group, 0x0100), "US", 1)
+    ds.add_new((group, 0x0102), "US", 0)
+    ds.add_new((group, 0x1500), "LO", f"Synthetic overlay label {index:04d}")
+    ds.add_new((group, 0x3000), "OW", value.encode("ascii") + b"\0" * 16)
+    return _injection(
+        case_id,
+        "overlay_graphics",
+        "overlay_data",
+        "root/OverlayData",
+        value,
+        keyword="OverlayData",
+        tag="(6000,3000)",
+        description="Artificial identifier in overlay graphics bulk data",
+    )
+
+
 def _inject_file_meta(ds: FileDataset, case_id: str, index: int, variant: int) -> Injection:
     value = _synthetic_token(index, "aet")
     ds.file_meta.SourceApplicationEntityTitle = value
@@ -285,6 +312,22 @@ def _inject_file_meta(ds: FileDataset, case_id: str, index: int, variant: int) -
         value,
         keyword="SourceApplicationEntityTitle",
         tag="(0002,0016)",
+    )
+
+
+def _inject_dicomdir_reference(ds: FileDataset, case_id: str, index: int, variant: int) -> Injection:
+    value = _synthetic_token(index, "dicomdir")
+    ds.FileSetID = value
+    element = _required_element(ds, "FileSetID")
+    return _injection(
+        case_id,
+        "dicomdir_reference",
+        "dicomdir_element",
+        "root/FileSetID",
+        value,
+        keyword="FileSetID",
+        tag=str(element.tag),
+        description="Artificial identifier in group 0004 file-set metadata",
     )
 
 
@@ -311,6 +354,8 @@ INJECTORS: dict[str, Callable[[FileDataset, str, int, int], Injection]] = {
     "temporal": _inject_temporal,
     "uid": _inject_uid,
     "pixel_annotation": _inject_pixel,
+    "overlay_graphics": _inject_overlay_graphics,
+    "dicomdir_reference": _inject_dicomdir_reference,
     "file_meta": _inject_file_meta,
     "preamble": _inject_preamble,
 }

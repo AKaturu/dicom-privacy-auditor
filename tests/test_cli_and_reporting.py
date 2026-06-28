@@ -6,7 +6,7 @@ import sys
 from dicom_privacy_auditor.benchmark.evaluate import evaluate_run, mcnemar_exact
 from dicom_privacy_auditor.benchmark.report import create_plots
 from dicom_privacy_auditor.benchmark.runner import run_external_pipeline
-from dicom_privacy_auditor.benchmark.synthetic import generate_benchmark
+from dicom_privacy_auditor.benchmark.synthetic import STRATA, generate_benchmark
 from dicom_privacy_auditor.benchmark_cli import main as benchmark_main
 from dicom_privacy_auditor.cli import main as audit_main
 from dicom_privacy_auditor.compare_cli import main as compare_main
@@ -54,7 +54,7 @@ def test_external_runner_and_reporting(tmp_path):
     )
     evaluation_dir = tmp_path / "evaluation"
     evaluation = evaluate_run(benchmark, external, output_dir=evaluation_dir)
-    assert evaluation.summary["residual_injections"] == 10
+    assert evaluation.summary["residual_injections"] == len(STRATA)
     figures = create_plots(evaluation_dir / "evaluation.json", evaluation_dir / "figures")
     assert len(figures) == 2
     assert all(path.exists() for path in figures)
@@ -104,12 +104,12 @@ def test_benchmark_cli_paths_and_mcnemar(tmp_path):
         == 0
     )
     comparison = json.loads(comparison_path.read_text())
-    assert comparison["discordant_pairs"] == 10
+    assert comparison["discordant_pairs"] == len(STRATA)
 
     noop = evaluate_run(benchmark, noop_run)
     baseline = evaluate_run(benchmark, baseline_run)
     direct = mcnemar_exact(noop, baseline)
-    assert direct["b_removed_a_failed"] == 10
+    assert direct["b_removed_a_failed"] == len(STRATA)
 
 
 def test_benchmark_all_command(tmp_path):

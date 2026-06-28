@@ -24,7 +24,7 @@ from dicom_privacy_auditor.ps315 import (
 def _write(path, dataset: Dataset) -> None:
     meta = FileMetaDataset()
     meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
-    meta.MediaStorageSOPInstanceUID = str(dataset.SOPInstanceUID)
+    meta.MediaStorageSOPInstanceUID = dataset.SOPInstanceUID
     meta.TransferSyntaxUID = ExplicitVRLittleEndian
     file_dataset = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
     file_dataset.update(dataset)

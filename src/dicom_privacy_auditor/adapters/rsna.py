@@ -60,12 +60,12 @@ class RsnaAnonymizerAdapter:
 
     def probe(self) -> dict[str, Any]:
         try:
-            from pynetdicom import AE
-            from pynetdicom.sop_class import Verification  # type: ignore[attr-defined]
+            from pynetdicom import AE, sop_class
         except ImportError as exc:
             raise RuntimeError("RSNA Anonymizer adapter requires the 'adapters' extra (pynetdicom)") from exc
+        verification: Any = vars(sop_class)["Verification"]
         ae = AE(ae_title=self.calling_ae_title)
-        ae.add_requested_context(Verification)
+        ae.add_requested_context(verification)
         association = ae.associate(self.host, self.port, ae_title=self.called_ae_title)
         if not association.is_established:
             return {"adapter": self.name, "reachable": False}

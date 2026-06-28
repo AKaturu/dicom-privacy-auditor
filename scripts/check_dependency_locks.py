@@ -5,11 +5,12 @@ from __future__ import annotations
 
 import argparse
 import re
+import sys
 from pathlib import Path
 
-try:
+if sys.version_info >= (3, 11):
     import tomllib
-except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10
+else:  # pragma: no cover - exercised on Python 3.10
     import tomli as tomllib
 from packaging.requirements import Requirement
 from packaging.utils import canonicalize_name
