@@ -32,6 +32,8 @@ DETECTION_CODES: dict[str, set[str]] = {
         "PIXEL_TEXT_LIKE_REGION",
         "PIXEL_DATA_UNCHANGED_WITH_ANNOTATION_RISK",
     },
+    "overlay_graphics": {"EMBEDDED_CONTENT_REVIEW", "SOURCE_VALUE_RETAINED"},
+    "dicomdir_reference": {"DIRECTORY_RECORD_ATTRIBUTE_PRESENT", "SOURCE_VALUE_RETAINED"},
     "file_meta": {"FILE_META_IDENTITY_PRESENT", "SOURCE_VALUE_RETAINED"},
     "preamble": {"NONZERO_PREAMBLE_REVIEW"},
 }
@@ -159,6 +161,16 @@ def _is_residual(
         dataset = pydicom.dcmread(candidate_path)
     except Exception as exc:
         return True, None, f"Candidate unreadable: {type(exc).__name__}: {exc}"
+    if injection.location_kind == "overlay_data":
+        for _, element in walk_dataset(dataset):
+            if not (0x6000 <= element.tag.group <= 0x60FF and element.tag.element == 0x3000):
+                continue
+            raw_value = element.value if isinstance(element.value, bytes) else bytes(element.value)
+            if injection.value.encode("ascii") in raw_value:
+                return True, None, None
+        return False, None, None
+    if injection.location_kind == "dicomdir_element":
+        return _dataset_contains(dataset, injection.value), None, None
     return _dataset_contains(dataset, injection.value), None, None
 
 

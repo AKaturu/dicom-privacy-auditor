@@ -7,7 +7,7 @@ import tarfile
 from pathlib import Path
 
 import pytest
-from hypothesis import given, settings
+from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from pydicom.dataset import Dataset
 from pydicom.sequence import Sequence
@@ -18,7 +18,11 @@ from dicom_privacy_auditor.jsonio import write_json
 from dicom_privacy_auditor.permissions import atomic_write_text
 
 
-@settings(max_examples=75, deadline=None)
+@settings(
+    max_examples=75,
+    deadline=None,
+    suppress_health_check=[HealthCheck.function_scoped_fixture],
+)
 @given(st.binary(min_size=0, max_size=4096))
 def test_arbitrary_bytes_never_escape_audit_boundary(tmp_path: Path, payload: bytes) -> None:
     path = tmp_path / "candidate.dcm"
@@ -91,10 +95,10 @@ def test_atomic_json_preserves_previous_file_when_replace_fails(
     destination = tmp_path / "result.json"
     destination.write_text('{"state":"old"}\n', encoding="utf-8")
 
-    def fail_replace(source: str | os.PathLike[str], target: str | os.PathLike[str]) -> None:
+    def fail_replace(source: Path, target: str | os.PathLike[str]) -> None:
         raise OSError("simulated crash")
 
-    monkeypatch.setattr(os, "replace", fail_replace)
+    monkeypatch.setattr(Path, "replace", fail_replace)
     with pytest.raises(OSError, match="simulated crash"):
         write_json(destination, {"state": "new"})
     assert json.loads(destination.read_text(encoding="utf-8")) == {"state": "old"}

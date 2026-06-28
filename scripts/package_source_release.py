@@ -7,11 +7,15 @@ import argparse
 import hashlib
 import os
 import stat
+import sys
 import time
 import zipfile
 from pathlib import Path
 
-import tomllib
+if sys.version_info >= (3, 11):
+    import tomllib
+else:  # pragma: no cover - exercised on Python 3.10
+    import tomli as tomllib
 
 EXCLUDED_DIRECTORIES = {
     ".git",

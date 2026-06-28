@@ -1,3 +1,5 @@
+import pydicom
+
 from dicom_privacy_auditor.benchmark.evaluate import evaluate_run
 from dicom_privacy_auditor.benchmark.runner import run_builtin_pipeline
 from dicom_privacy_auditor.benchmark.synthetic import STRATA, generate_benchmark
@@ -10,6 +12,32 @@ def test_benchmark_generation_is_balanced(tmp_path):
     assert sum(len(case.injections) for case in manifest.cases) == len(STRATA)
     assert (root / "manifest.json").exists()
     assert all((root / case.relative_path).exists() for case in manifest.cases)
+
+
+def test_benchmark_generates_overlay_graphics_stratum(tmp_path):
+    root = tmp_path / "benchmark"
+    manifest = generate_benchmark(root, cases_per_stratum=1, clean_controls=0, seed=31)
+    case = next(case for case in manifest.cases if case.metadata["stratum"] == "overlay_graphics")
+    injection = case.injections[0]
+
+    dataset = pydicom.dcmread(root / case.relative_path)
+
+    assert injection.location_kind == "overlay_data"
+    assert injection.keyword == "OverlayData"
+    assert injection.value.encode("ascii") in dataset[(0x6000, 0x3000)].value
+
+
+def test_benchmark_generates_dicomdir_reference_stratum(tmp_path):
+    root = tmp_path / "benchmark"
+    manifest = generate_benchmark(root, cases_per_stratum=1, clean_controls=0, seed=37)
+    case = next(case for case in manifest.cases if case.metadata["stratum"] == "dicomdir_reference")
+    injection = case.injections[0]
+
+    dataset = pydicom.dcmread(root / case.relative_path)
+
+    assert injection.location_kind == "dicomdir_element"
+    assert injection.keyword == "FileSetID"
+    assert dataset.FileSetID == injection.value
 
 
 def test_noop_and_baseline_have_expected_end_to_end_behavior(tmp_path):

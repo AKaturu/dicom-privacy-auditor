@@ -197,8 +197,12 @@ def _findings_for_element(
             )
         )
 
-    if element.keyword in GRAPHIC_OR_EMBEDDED_KEYWORDS and is_nonempty(element):
-        severity, rationale = GRAPHIC_OR_EMBEDDED_KEYWORDS[element.keyword]
+    is_overlay_data = 0x6000 <= element.tag.group <= 0x60FF and element.tag.element == 0x3000
+    if (element.keyword in GRAPHIC_OR_EMBEDDED_KEYWORDS or is_overlay_data) and is_nonempty(element):
+        severity, rationale = GRAPHIC_OR_EMBEDDED_KEYWORDS.get(
+            element.keyword,
+            ("high", "Overlay data may contain identifying graphics or text"),
+        )
         findings.append(
             Finding(
                 code="EMBEDDED_CONTENT_REVIEW",
