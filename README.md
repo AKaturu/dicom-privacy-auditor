@@ -7,6 +7,8 @@
 
 A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating de-identification workflows across metadata, nested sequences, private attributes, filenames, UIDs, dates, DICOMDIR-like references, File Meta Information, preambles, overlays, and burned-in pixel annotations.
 
+![Synthetic DICOM privacy benchmark demo](docs/assets/demo.gif)
+
 > **Research prototype—not a compliance certificate.** This repository does not prove compliance with DICOM PS3.15, HIPAA, GDPR, or institutional policy. A file with zero findings is not proven safe for release. The built-in de-identifier is a transparent benchmark baseline, not a production de-identification engine.
 
 ## Data Policy For GitHub
@@ -123,6 +125,13 @@ source .venv/bin/activate
 
 python -m pip install --upgrade pip
 pip install -e ".[dev,all]"
+```
+
+Regenerate the GitHub demo GIF/MP4 from the synthetic benchmark workflow:
+
+```bash
+python -m pip install -e ".[analysis,media]"
+python scripts/generate_demo_media.py
 ```
 
 ## Native executables

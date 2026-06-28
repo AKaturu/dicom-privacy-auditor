@@ -86,6 +86,16 @@ The README now includes status badges, a repository guide, an explicit quality-g
 
 No source tests were added; this was documentation and package metadata polish.
 
+### GitHub Demo Media Refresh
+
+#### Validation
+
+Added `scripts/generate_demo_media.py`, `docs/DEMO_MEDIA.md`, and committed synthetic-only poster, GIF, and MP4 assets under `docs/assets/`. The generator runs `dicom-privacy-demo`, reads the real synthetic benchmark summary, and renders GitHub-ready media without committing DICOM objects or generated workspaces.
+
+#### Tests Added
+
+No source tests were added; the media generator is validated by executing it and verifying the generated assets.
+
 ### Benchmark Overlay Graphics Roadmap Item
 
 #### Validation
