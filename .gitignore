@@ -41,3 +41,16 @@ ps315_*_table_e1_*.json
 *.sqlite-shm
 validation/live/*
 !validation/live/README.md
+
+# External validation data and local secrets
+RadiologyExternalValidation/
+external_data/
+.external-data/
+external-validation/
+outputs/external/
+predictions/external/
+*.env
+.env*
+*.key
+*.token
+*credentials*.json
