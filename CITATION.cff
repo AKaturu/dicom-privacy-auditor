@@ -4,9 +4,9 @@ title: "DICOM Privacy Auditor"
 type: software
 authors:
   - family-names: Katuru
-    given-names: Abinav
+    given-names: Abhinav
 version: 0.7.2
-date-released: 2026-06-20
+date-released: 2026-06-28
 license: MIT
 repository-code: "https://github.com/AKaturu/dicom-privacy-auditor"
 keywords:
