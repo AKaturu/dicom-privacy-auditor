@@ -11,16 +11,18 @@ A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating
 
 > **Research prototype—not a compliance certificate.** This repository does not prove compliance with DICOM PS3.15, HIPAA, GDPR, or institutional policy. A file with zero findings is not proven safe for release. The built-in de-identifier is a transparent benchmark baseline, not a production de-identification engine.
 
-**Validation status:** Software functionality has been tested using synthetic or public data as described below. This project has not undergone prospective clinical validation and is not intended for independent clinical decision-making.
+## Evidence Status
 
 | Evidence | Status |
 |---|---|
-| Unit tests | Passed (163 passed, 7 skipped, 85.77% coverage) |
-| Synthetic end-to-end test | Complete |
+| Unit and integration tests | Passed (163 passed, 7 skipped, 85.77% coverage) |
+| Synthetic end-to-end evaluation | Complete |
 | Public-data evaluation | Partial (7 of 10 external preflight checks ready) |
-| Expert review | Not completed |
+| Independent expert review | Not completed |
 | Institutional validation | Not completed |
 | Prospective clinical validation | Not completed |
+
+This software is a research prototype and is not intended for independent clinical decision-making.
 
 ## Clinical Problem
 

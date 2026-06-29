@@ -17,8 +17,8 @@ def test_source_package_is_reproducible_and_excludes_runtime_artifacts(tmp_path)
     (root / ".coverage").write_text("runtime")
     (root / "build").mkdir()
     (root / "build" / "bad.txt").write_text("bad")
-    (root / "validation" / "codex").mkdir(parents=True)
-    (root / "validation" / "codex" / "local-evidence.json").write_text("{}")
+    (root / "validation" / "local").mkdir(parents=True)
+    (root / "validation" / "local" / "local-evidence.json").write_text("{}")
     first = tmp_path / "first.zip"
     second = tmp_path / "second.zip"
     package_source(root, first, epoch=1781913600)
@@ -27,7 +27,7 @@ def test_source_package_is_reproducible_and_excludes_runtime_artifacts(tmp_path)
     with zipfile.ZipFile(first) as archive:
         names = archive.namelist()
     assert "dicom-privacy-auditor-v1.2.3/README.md" in names
-    assert not any(".coverage" in name or "/build/" in name or "/validation/codex/" in name for name in names)
+    assert not any(".coverage" in name or "/build/" in name or "/validation/local/" in name for name in names)
     assert all(not path.is_symlink() for path in collect_files(root))
 
 

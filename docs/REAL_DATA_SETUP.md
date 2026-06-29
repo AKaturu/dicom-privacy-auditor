@@ -22,7 +22,7 @@ Keep real inputs in a local directory that is not inside the repository:
     rsna-ctp/
 ```
 
-On Windows, an external drive path such as `D:/CodexExternal/MIDI-B` is fine. Do not move the DICOM corpus or answer-key database under the project tree.
+On Windows, an external drive path such as `D:/SecureDicomPrivacyData/MIDI-B` is fine. Do not move the DICOM corpus or answer-key database under the project tree.
 
 ## Synthetic Demo Path
 
@@ -72,9 +72,9 @@ Create a local config from `configs/external-validation.example.json`, then poin
 {
   "midi_b_corpus": "/secure/dicom-privacy-data/midi-b/source-dicom",
   "midi_b_answer_key": "/secure/dicom-privacy-data/midi-b/answer-keys/answer_key.sqlite",
-  "official_validator_command": "validation/codex/external/midi-validator.cmd",
-  "rsna_anonymizer_command": "validation/codex/external/rsna/run-rsna-anonymizer.cmd",
-  "rsna_ctp_command": "validation/codex/external/rsna/run-ctp.cmd",
+  "official_validator_command": "/secure/dicom-privacy-data/tools/midi-validation-script/run-validator",
+  "rsna_anonymizer_command": "/secure/dicom-privacy-data/tools/rsna-anonymizer/run-anonymizer",
+  "rsna_ctp_command": "/secure/dicom-privacy-data/tools/rsna-ctp/run-ctp",
   "orthanc_http_url": "http://127.0.0.1:8042/system",
   "orthanc_dimse_host": "127.0.0.1",
   "orthanc_dimse_port": 4242,
