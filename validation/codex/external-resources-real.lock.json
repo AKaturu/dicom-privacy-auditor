@@ -1,9 +1,0 @@
-{
-  "config_sha256": "bf77a6f7efac7a1d6b3be82fe6edaec8c04ac916d699d6e311501d0400dfa5e4",
-  "resource_fingerprints": {
-    "official_validator": "37fe98967470aeeed0d643443dbfe5f7bca8f942110ccb6d5b38e82ea24db654",
-    "rsna_anonymizer": "b49e844220efa5c1b4c06e20de309c03dfa3c34a48f6f40fd3edf414c6ca25e5",
-    "rsna_ctp": "ad963903381f661dc5964e911af674080f446bbdf3755405ef0930e048a08cff"
-  },
-  "schema_version": "1.0"
-}

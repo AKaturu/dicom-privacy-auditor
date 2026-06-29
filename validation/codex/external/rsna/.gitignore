@@ -1,5 +1,0 @@
-*.jar
-*.dcm
-installed/
-run-rsna-dat/run_manifest.json
-run-rsna-dat/objects/

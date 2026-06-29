@@ -7,6 +7,6 @@ recursive-include packaging *.py *.txt
 include compose*.yml Dockerfile Makefile requirements-reproducible.txt
 
 recursive-include validation *.md *.json
-prune validation/codex
+prune validation/local
 
 recursive-include requirements *.txt

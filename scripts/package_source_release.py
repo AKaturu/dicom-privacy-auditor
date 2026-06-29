@@ -45,7 +45,7 @@ def collect_files(root: Path, output: Path | None = None) -> list[Path]:
     output_resolved = output.resolve() if output else None
     for path in sorted(root.rglob("*"), key=lambda item: item.as_posix()):
         relative = path.relative_to(root)
-        if len(relative.parts) >= 2 and relative.parts[:2] == ("validation", "codex"):
+        if len(relative.parts) >= 2 and relative.parts[:2] == ("validation", "local"):
             continue
         if any(part in EXCLUDED_DIRECTORIES for part in relative.parts):
             continue
