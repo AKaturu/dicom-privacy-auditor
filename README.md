@@ -137,6 +137,10 @@ pip install --no-deps .
 
 See [CITATION.cff](CITATION.cff). Until a peer-reviewed version exists, cite the software release and commit hash.
 
+## Legal Notices
+
+DICOM® is the registered trademark of the National Electrical Manufacturers Association.
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
