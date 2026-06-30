@@ -982,6 +982,12 @@ def _evaluate_action(
                 passed = np.array_equal(source_pixels, candidate_pixels)
                 reason = "pixels retained" if passed else "pixel values changed"
         except Exception as exc:
+            if isinstance(exc, AttributeError) and "Pixel Data" in str(exc):
+                return MidiActionResult(
+                    status="unresolved",
+                    reason=f"Pixel comparison unavailable: {type(exc).__name__}: {exc}",
+                    **common,
+                )
             return MidiActionResult(
                 status="error", reason=f"Pixel comparison failed: {type(exc).__name__}: {exc}", **common
             )
