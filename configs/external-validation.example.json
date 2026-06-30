@@ -1,7 +1,12 @@
 {
   "midi_b_corpus": "/data/MIDI-B/dicom",
   "midi_b_answer_key": "/data/MIDI-B/answer-key.sqlite",
+  "midi_b_uid_mapping": "/data/MIDI-B/mappings/uid-mapping.csv",
+  "midi_b_patient_mapping": "/data/MIDI-B/mappings/patient-mapping.csv",
   "official_validator_command": "midi-validator",
+  "official_validator_output_dir": "/data/MIDI-B/official-validator-results",
+  "official_validator_log_dir": "/data/MIDI-B/official-validator-logs",
+  "official_validator_run_name": "baseline-validation-run",
   "rsna_anonymizer_command": "rsna-anonymizer",
   "rsna_ctp_command": "java",
   "orthanc_http_url": "http://127.0.0.1:8042/system",

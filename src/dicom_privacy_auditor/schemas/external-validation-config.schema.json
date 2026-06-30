@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/krishna2006sai/dicom-privacy-auditor/schemas/external-validation-config.schema.json",
+  "$id": "https://github.com/AKaturu/dicom-privacy-auditor/schemas/external-validation-config.schema.json",
   "type": "object",
   "properties": {
     "midi_b_corpus": {
@@ -11,9 +11,33 @@
       "type": "string",
       "minLength": 1
     },
+    "midi_b_uid_mapping": {
+      "type": "string",
+      "minLength": 1
+    },
+    "midi_b_patient_mapping": {
+      "type": "string",
+      "minLength": 1
+    },
     "official_validator_command": {
       "type": "string",
       "minLength": 1
+    },
+    "official_validator_output_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "official_validator_log_dir": {
+      "type": "string",
+      "minLength": 1
+    },
+    "official_validator_run_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "official_validator_stale_after_minutes": {
+      "type": "number",
+      "exclusiveMinimum": 0
     },
     "rsna_anonymizer_command": {
       "type": "string",
@@ -72,7 +96,11 @@
         "enum": [
           "midi_b_corpus",
           "midi_b_answer_key",
+          "midi_b_uid_mapping",
+          "midi_b_patient_mapping",
           "official_validator",
+          "official_validator_output_dir",
+          "official_validator_log_dir",
           "rsna_anonymizer",
           "rsna_ctp",
           "orthanc_http",

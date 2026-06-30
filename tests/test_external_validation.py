@@ -34,10 +34,16 @@ def test_external_preflight_optional_checks_and_fingerprints(tmp_path: Path):
     (corpus / "case.dcm").write_bytes(b"dicom")
     key = tmp_path / "key.sqlite"
     key.write_bytes(b"sqlite")
+    uid_mapping = tmp_path / "uid.csv"
+    uid_mapping.write_text("id_old,id_new\n1,2\n", encoding="utf-8")
+    patient_mapping = tmp_path / "patient.csv"
+    patient_mapping.write_text("id_old,id_new\nold,new\n", encoding="utf-8")
     result = run_preflight(
         {
             "midi_b_corpus": str(corpus),
             "midi_b_answer_key": str(key),
+            "midi_b_uid_mapping": str(uid_mapping),
+            "midi_b_patient_mapping": str(patient_mapping),
             "fingerprint_resources": True,
             "optional_checks": [
                 "official_validator",
@@ -55,6 +61,8 @@ def test_external_preflight_optional_checks_and_fingerprints(tmp_path: Path):
     indexed = {item["name"]: item for item in result["checks"]}
     assert indexed["midi_b_corpus"]["fingerprint"].startswith("inventory-sha256:")
     assert len(indexed["midi_b_answer_key"]["fingerprint"]) == 64
+    assert len(indexed["midi_b_uid_mapping"]["fingerprint"]) == 64
+    assert len(indexed["midi_b_patient_mapping"]["fingerprint"]) == 64
     assert indexed["official_validator"]["required"] is False
 
 
@@ -78,6 +86,8 @@ def test_external_preflight_handles_quoted_command(tmp_path: Path, monkeypatch):
             "optional_checks": [
                 "midi_b_corpus",
                 "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
                 "rsna_anonymizer",
                 "rsna_ctp",
                 "orthanc_http",
@@ -102,6 +112,8 @@ def test_content_fingerprint_detects_same_size_byte_change(tmp_path: Path):
             "fingerprint_mode": "content",
             "optional_checks": [
                 "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
                 "official_validator",
                 "rsna_anonymizer",
                 "rsna_ctp",
@@ -120,6 +132,8 @@ def test_content_fingerprint_detects_same_size_byte_change(tmp_path: Path):
             "fingerprint_mode": "content",
             "optional_checks": [
                 "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
                 "official_validator",
                 "rsna_anonymizer",
                 "rsna_ctp",
@@ -142,6 +156,8 @@ def test_resource_lock_detects_drift(tmp_path: Path):
         "fingerprint_mode": "content",
         "optional_checks": [
             "midi_b_corpus",
+            "midi_b_uid_mapping",
+            "midi_b_patient_mapping",
             "official_validator",
             "rsna_anonymizer",
             "rsna_ctp",
@@ -159,6 +175,91 @@ def test_resource_lock_detects_drift(tmp_path: Path):
     assert verify_resource_lock(lock, run_preflight(config))["status"] == "drift"
 
 
+def test_official_validator_monitor_detects_failed_zero_byte_db(tmp_path: Path):
+    output = tmp_path / "official"
+    run_dir = output / "run"
+    run_dir.mkdir(parents=True)
+    (run_dir / "validation_results.db").write_bytes(b"")
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "20260630153242_run_validation.log").write_text(
+        "2026-06-30 16:02:35,155 - [ERROR] - Error:\n"
+        "numpy._core._exceptions._ArrayMemoryError\n"
+        "2026-06-30 16:02:47,098 - [INFO] - Run Complete\n",
+        encoding="utf-8",
+    )
+
+    result = run_preflight(
+        {
+            "official_validator_output_dir": str(output),
+            "official_validator_log_dir": str(logs),
+            "official_validator_run_name": "run",
+            "optional_checks": [
+                "midi_b_corpus",
+                "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
+                "official_validator",
+                "rsna_anonymizer",
+                "rsna_ctp",
+                "orthanc_http",
+                "orthanc_dimse",
+                "dicomweb",
+                "blinded_reviewers",
+                "credentials",
+            ],
+        }
+    )
+
+    monitor = result["official_validator_monitor"]
+    assert monitor["status"] == "failed"
+    assert monitor["result_db_bytes"] == 0
+    assert monitor["log_error_count"] == 1
+    assert monitor["log_run_complete"] is True
+
+
+def test_official_validator_monitor_detects_completed_result_db(tmp_path: Path):
+    import sqlite3
+
+    output = tmp_path / "official"
+    run_dir = output / "run"
+    run_dir.mkdir(parents=True)
+    with sqlite3.connect(run_dir / "validation_results.db") as connection:
+        connection.execute("CREATE TABLE validation_results (id INTEGER)")
+    logs = tmp_path / "logs"
+    logs.mkdir()
+    (logs / "20260630153242_run_validation.log").write_text(
+        "2026-06-30 16:02:47,098 - [INFO] - Run Complete\n",
+        encoding="utf-8",
+    )
+
+    result = run_preflight(
+        {
+            "official_validator_output_dir": str(output),
+            "official_validator_log_dir": str(logs),
+            "official_validator_run_name": "run",
+            "optional_checks": [
+                "midi_b_corpus",
+                "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
+                "official_validator",
+                "rsna_anonymizer",
+                "rsna_ctp",
+                "orthanc_http",
+                "orthanc_dimse",
+                "dicomweb",
+                "blinded_reviewers",
+                "credentials",
+            ],
+        }
+    )
+
+    monitor = result["official_validator_monitor"]
+    assert monitor["status"] == "completed"
+    assert monitor["validation_results_table"] is True
+
+
 def test_authenticated_http_requires_https(monkeypatch):
     monkeypatch.setenv("TOKEN", "Bearer secret")
     result = run_preflight(
@@ -168,6 +269,8 @@ def test_authenticated_http_requires_https(monkeypatch):
             "optional_checks": [
                 "midi_b_corpus",
                 "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
                 "official_validator",
                 "rsna_anonymizer",
                 "rsna_ctp",
@@ -221,6 +324,8 @@ def test_external_http_tcp_and_cli_paths(tmp_path: Path, monkeypatch, capsys):
         "optional_checks": [
             "midi_b_corpus",
             "midi_b_answer_key",
+            "midi_b_uid_mapping",
+            "midi_b_patient_mapping",
             "official_validator",
             "rsna_anonymizer",
             "rsna_ctp",
@@ -256,6 +361,8 @@ def test_external_cli_invalid_config_and_lock_drift(tmp_path: Path, capsys):
                 "fingerprint_mode": "content",
                 "optional_checks": [
                     "midi_b_corpus",
+                    "midi_b_uid_mapping",
+                    "midi_b_patient_mapping",
                     "official_validator",
                     "rsna_anonymizer",
                     "rsna_ctp",

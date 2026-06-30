@@ -9,7 +9,9 @@ import os
 import shlex
 import shutil
 import socket
+import sqlite3
 from dataclasses import asdict, dataclass, replace
+from datetime import datetime, timezone
 from importlib.resources import files
 from pathlib import Path
 from typing import Any
@@ -67,6 +69,14 @@ def _path_check(
         else (_sha256(path) if fingerprint else None)
     )
     return Check(name, "ready", str(path.resolve()), fingerprint=digest)
+
+
+def _directory_check(
+    name: str, value: str | None, *, fingerprint_mode: str = "none", required_when_missing: bool = True
+) -> Check | None:
+    if not value and not required_when_missing:
+        return None
+    return _path_check(name, value, directory=True, fingerprint_mode=fingerprint_mode)
 
 
 def _command_check(name: str, command: str | None, *, fingerprint_mode: str = "none") -> Check:
@@ -131,6 +141,115 @@ def _tcp_check(name: str, host: str | None, port: int | None, *, timeout: float)
         return Check(name, "unreachable", f"{host}:{port}: {exc}")
 
 
+def _sqlite_table_count(path: Path, table: str) -> int | None:
+    try:
+        with sqlite3.connect(path) as connection:
+            row = connection.execute(
+                "SELECT count(*) FROM sqlite_master WHERE type='table' AND name=?", (table,)
+            ).fetchone()
+        return int(row[0]) if row else 0
+    except sqlite3.Error:
+        return None
+
+
+def _read_log_signals(log_path: Path | None) -> dict[str, Any]:
+    if log_path is None or not log_path.is_file():
+        return {"log_found": False, "error_count": 0, "run_complete": False, "last_error": None}
+    error_count = 0
+    run_complete = False
+    last_error = None
+    try:
+        with log_path.open("r", encoding="utf-8", errors="replace") as handle:
+            for line in handle:
+                if "[ERROR]" in line:
+                    error_count += 1
+                    last_error = line.strip()
+                if "Run Complete" in line:
+                    run_complete = True
+    except OSError:
+        return {"log_found": False, "error_count": 0, "run_complete": False, "last_error": None}
+    return {
+        "log_found": True,
+        "error_count": error_count,
+        "run_complete": run_complete,
+        "last_error": last_error,
+    }
+
+
+def monitor_official_validator(config: dict[str, Any]) -> dict[str, Any] | None:
+    """Summarize an official MIDI-B validator run without exposing local paths."""
+    output_dir = config.get("official_validator_output_dir")
+    log_dir = config.get("official_validator_log_dir")
+    run_name = config.get("official_validator_run_name")
+    if not output_dir and not log_dir:
+        return None
+
+    stale_after_minutes = float(config.get("official_validator_stale_after_minutes", 60))
+    output_root = Path(output_dir).expanduser() if output_dir else None
+    run_dir = output_root / run_name if output_root and run_name else output_root
+    log_root = Path(log_dir).expanduser() if log_dir else None
+
+    latest_log = None
+    if log_root and log_root.is_dir():
+        log_files = sorted(log_root.glob("*.log"), key=lambda item: item.stat().st_mtime, reverse=True)
+        latest_log = log_files[0] if log_files else None
+
+    result_db = run_dir / "validation_results.db" if run_dir else None
+    result_db_bytes = result_db.stat().st_size if result_db and result_db.is_file() else None
+    validation_table_present = (
+        _sqlite_table_count(result_db, "validation_results") == 1
+        if result_db and result_db.is_file() and result_db_bytes
+        else False
+    )
+    pixel_validation = run_dir / "pixel_validation.xlsx" if run_dir else None
+    scoring_instance = run_dir / "scoring_report_instance.xlsx" if run_dir else None
+    scoring_series = run_dir / "scoring_report_series.xlsx" if run_dir else None
+    signals = _read_log_signals(latest_log)
+
+    latest_mtime = None
+    for candidate in [result_db, pixel_validation, scoring_instance, scoring_series, latest_log]:
+        if candidate and candidate.exists():
+            mtime = candidate.stat().st_mtime
+            latest_mtime = mtime if latest_mtime is None else max(latest_mtime, mtime)
+
+    if validation_table_present:
+        status = "completed"
+        detail = "validation_results table is present"
+    elif signals["error_count"] > 0:
+        status = "failed"
+        detail = "latest official-validator log contains errors"
+    elif signals["run_complete"]:
+        status = "failed"
+        detail = "run completed without a persisted validation_results table"
+    elif latest_mtime:
+        age_minutes = (datetime.now(timezone.utc).timestamp() - latest_mtime) / 60
+        status = "running" if age_minutes <= stale_after_minutes else "stale"
+        detail = f"latest validator artifact is {age_minutes:.1f} minutes old"
+    else:
+        status = "not_started"
+        detail = "no official-validator artifacts found"
+
+    return {
+        "schema_version": "1.0",
+        "status": status,
+        "detail": detail,
+        "run_name": run_name,
+        "run_dir_configured": bool(run_dir),
+        "log_dir_configured": bool(log_root),
+        "latest_log_name": latest_log.name if latest_log else None,
+        "result_db_name": result_db.name if result_db else None,
+        "result_db_bytes": result_db_bytes,
+        "validation_results_table": validation_table_present,
+        "pixel_validation_present": bool(pixel_validation and pixel_validation.is_file()),
+        "scoring_report_present": bool(
+            (scoring_instance and scoring_instance.is_file()) or (scoring_series and scoring_series.is_file())
+        ),
+        "log_error_count": signals["error_count"],
+        "log_run_complete": signals["run_complete"],
+        "last_error": signals["last_error"],
+    }
+
+
 def validate_config(config: dict[str, Any]) -> None:
     schema_path = files("dicom_privacy_auditor.schemas").joinpath("external-validation-config.schema.json")
     schema = json.loads(schema_path.read_text(encoding="utf-8"))
@@ -149,11 +268,15 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
         "inventory" if config.get("fingerprint_resources", False) else "none"
     )
     auth_env = config.get("http_auth_environment_variable")
-    checks = [
+    checks: list[Check] = [
         _path_check(
             "midi_b_corpus", config.get("midi_b_corpus"), directory=True, fingerprint_mode=fingerprint_mode
         ),
         _path_check("midi_b_answer_key", config.get("midi_b_answer_key"), fingerprint_mode=fingerprint_mode),
+        _path_check("midi_b_uid_mapping", config.get("midi_b_uid_mapping"), fingerprint_mode=fingerprint_mode),
+        _path_check(
+            "midi_b_patient_mapping", config.get("midi_b_patient_mapping"), fingerprint_mode=fingerprint_mode
+        ),
         _command_check(
             "official_validator", config.get("official_validator_command"), fingerprint_mode=fingerprint_mode
         ),
@@ -170,6 +293,22 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
         ),
         _http_check("dicomweb", config.get("dicomweb_url"), timeout=timeout, auth_env=auth_env),
     ]
+    for check in [
+        _directory_check(
+            "official_validator_output_dir",
+            config.get("official_validator_output_dir"),
+            fingerprint_mode=fingerprint_mode,
+            required_when_missing=False,
+        ),
+        _directory_check(
+            "official_validator_log_dir",
+            config.get("official_validator_log_dir"),
+            fingerprint_mode=fingerprint_mode,
+            required_when_missing=False,
+        ),
+    ]:
+        if check:
+            checks.append(check)
     reviewers = config.get("reviewers") or []
     checks.append(
         Check(
@@ -191,7 +330,7 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
     checks = [replace(item, required=item.name not in optional) for item in checks]
     payload = [asdict(item) for item in checks]
     required_checks = [item for item in checks if item.required]
-    return {
+    result = {
         "schema_version": "1.0",
         "status": "ready" if all(item.status == "ready" for item in required_checks) else "blocked",
         "checks": payload,
@@ -205,6 +344,10 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
             "Institutional authorization and data-use approvals must be verified outside this tool.",
         ],
     }
+    monitor = monitor_official_validator(config)
+    if monitor is not None:
+        result["official_validator_monitor"] = monitor
+    return result
 
 
 def _redact_check_details(result: dict[str, Any]) -> dict[str, Any]:
@@ -212,7 +355,17 @@ def _redact_check_details(result: dict[str, Any]) -> dict[str, Any]:
     for item in redacted.get("checks", []):
         if (
             item.get("name")
-            in {"midi_b_corpus", "midi_b_answer_key", "official_validator", "rsna_anonymizer", "rsna_ctp"}
+            in {
+                "midi_b_corpus",
+                "midi_b_answer_key",
+                "midi_b_uid_mapping",
+                "midi_b_patient_mapping",
+                "official_validator",
+                "official_validator_output_dir",
+                "official_validator_log_dir",
+                "rsna_anonymizer",
+                "rsna_ctp",
+            }
             and item.get("status") == "ready"
         ):
             item["detail"] = "configured resource available"
@@ -228,7 +381,11 @@ def build_resource_lock(config: dict[str, Any], result: dict[str, Any]) -> dict[
         not in {
             "midi_b_corpus",
             "midi_b_answer_key",
+            "midi_b_uid_mapping",
+            "midi_b_patient_mapping",
             "official_validator_command",
+            "official_validator_output_dir",
+            "official_validator_log_dir",
             "rsna_anonymizer_command",
             "rsna_ctp_command",
             "http_auth_environment_variable",
