@@ -9,6 +9,9 @@
     "summary": {"type": "object"},
     "by_action": {"type": "array", "items": {"type": "object"}},
     "by_category": {"type": "array", "items": {"type": "object"}},
+    "results_csv": {"type": ["string", "null"]},
+    "results_embedded": {"type": ["integer", "null"], "minimum": 0},
+    "results_truncated": {"type": "boolean"},
     "results": {
       "type": "array",
       "items": {

@@ -252,7 +252,22 @@ def test_midi_sqlite_import_and_action_evaluation(tmp_path):
     assert evaluation.summary["passed"] == 10
     assert evaluation.summary["failed"] == 0
     assert evaluation.summary["score"] == 1.0
+    assert evaluation.results_truncated is False
+    assert evaluation.results_embedded == 10
     assert (tmp_path / "evaluation" / "MIDI_REPORT.md").exists()
+
+    limited = evaluate_midi(
+        imported,
+        candidate_root,
+        tmp_path / "evaluation-limited",
+        embedded_results_limit=1,
+    )
+    assert limited.summary["actions"] == 10
+    assert limited.results_truncated is True
+    assert limited.results_embedded == 1
+    assert len(limited.results) == 1
+    with (tmp_path / "evaluation-limited" / "midi_results.csv").open(encoding="utf-8") as handle:
+        assert sum(1 for _ in handle) == 11
 
 
 def test_mapping_reader_accepts_descriptive_public_headers(tmp_path):

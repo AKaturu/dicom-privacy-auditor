@@ -9,10 +9,10 @@ import shutil
 import sqlite3
 import tempfile
 import warnings
-from collections import Counter, defaultdict
-from collections.abc import Iterable
+from collections import Counter, OrderedDict, defaultdict
+from collections.abc import Iterable, Iterator
 from contextlib import closing
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, fields
 from pathlib import Path, PureWindowsPath
 from typing import Any, cast
 
@@ -132,6 +132,9 @@ class MidiEvaluation:
     summary: dict[str, Any]
     by_action: list[dict[str, Any]]
     by_category: list[dict[str, Any]]
+    results_csv: str | None = None
+    results_embedded: int | None = None
+    results_truncated: bool = False
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -140,6 +143,9 @@ class MidiEvaluation:
             "by_action": self.by_action,
             "by_category": self.by_category,
             "results": [asdict(item) for item in self.results],
+            "results_csv": self.results_csv,
+            "results_embedded": self.results_embedded,
+            "results_truncated": self.results_truncated,
         }
 
 
@@ -167,10 +173,26 @@ def _write_private_jsonl(path: Path, rows: list[MidiAction]) -> None:
         raise
 
 
+def _comparable_path(path: Path) -> str:
+    text = str(path.resolve())
+    if text.startswith("\\\\?\\UNC\\"):
+        text = "\\\\" + text[8:]
+    elif text.startswith("\\\\?\\"):
+        text = text[4:]
+    return os.path.normcase(os.path.abspath(text))
+
+
+def _path_is_under(path: Path, root: Path) -> bool:
+    try:
+        return os.path.commonpath([_comparable_path(path), _comparable_path(root)]) == _comparable_path(root)
+    except ValueError:
+        return False
+
+
 def _contained_path(root: Path, relative: str, *, label: str) -> Path:
     normalized = _validated_relative_path(relative)
     candidate = (root / normalized).resolve()
-    if root != candidate and root not in candidate.parents:
+    if not _path_is_under(candidate, root):
         raise ValueError(f"{label} escapes its configured root: {relative}")
     return candidate
 
@@ -761,8 +783,7 @@ def import_midi(
     return manifest
 
 
-def read_actions(path: Path) -> list[MidiAction]:
-    actions: list[MidiAction] = []
+def iter_actions(path: Path) -> Iterator[MidiAction]:
     with path.open(encoding="utf-8") as handle:
         for line in handle:
             if len(line) > 10 * 1024 * 1024:
@@ -770,8 +791,11 @@ def read_actions(path: Path) -> list[MidiAction]:
             payload = json.loads(line)
             if payload.get("bbox_xyxy") is not None:
                 payload["bbox_xyxy"] = tuple(payload["bbox_xyxy"])
-            actions.append(MidiAction(**payload))
-    return actions
+            yield MidiAction(**payload)
+
+
+def read_actions(path: Path) -> list[MidiAction]:
+    return list(iter_actions(path))
 
 
 def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]]:
@@ -783,7 +807,7 @@ def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]
         if path.is_symlink():
             raise ValueError(f"DICOM candidate trees must not contain symbolic-link files: {path}")
         resolved = path.resolve()
-        if root != resolved and root not in resolved.parents:
+        if not _path_is_under(resolved, root):
             raise ValueError(f"DICOM candidate file escapes its configured root: {path}")
         try:
             with warnings.catch_warnings():
@@ -800,6 +824,44 @@ def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]
     return by_uid, by_patient
 
 
+class _MidiReadCache:
+    def __init__(self, max_items: int = 8) -> None:
+        self.max_items = max(1, max_items)
+        self._metadata: OrderedDict[Path, Any] = OrderedDict()
+        self._pixels: OrderedDict[tuple[Path, int | None], np.ndarray] = OrderedDict()
+
+    def _remember(self, cache: OrderedDict[Any, Any], key: Any, value: Any) -> Any:
+        cache[key] = value
+        cache.move_to_end(key)
+        while len(cache) > self.max_items:
+            cache.popitem(last=False)
+        return value
+
+    def metadata(self, path: Path):
+        key = path.resolve()
+        if key in self._metadata:
+            self._metadata.move_to_end(key)
+            return self._metadata[key]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            dataset = pydicom.dcmread(key, stop_before_pixels=True)
+        return self._remember(self._metadata, key, dataset)
+
+    def pixels(self, path: Path, frame: int | None) -> np.ndarray:
+        resolved = path.resolve()
+        key = (resolved, frame)
+        if key in self._pixels:
+            self._pixels.move_to_end(key)
+            return self._pixels[key]
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", UserWarning)
+            pixels = np.asarray(pydicom.dcmread(resolved).pixel_array)
+        if pixels.ndim > 2:
+            index = max(0, (frame or 1) - 1)
+            pixels = pixels[index]
+        return self._remember(self._pixels, key, pixels)
+
+
 def _dataset_value(dataset, tag_hex: str | None):
     if not tag_hex:
         return None, False
@@ -809,13 +871,22 @@ def _dataset_value(dataset, tag_hex: str | None):
     return dataset[tag].value, True
 
 
-def _pixel_arrays(source_path: Path, candidate_path: Path, frame: int | None):
-    source = np.asarray(pydicom.dcmread(source_path).pixel_array)
-    candidate = np.asarray(pydicom.dcmread(candidate_path).pixel_array)
-    if source.ndim > 2:
-        index = max(0, (frame or 1) - 1)
-        source = source[index]
-        candidate = candidate[index]
+def _pixel_arrays(
+    source_path: Path,
+    candidate_path: Path,
+    frame: int | None,
+    read_cache: _MidiReadCache | None = None,
+):
+    if read_cache:
+        source = read_cache.pixels(source_path, frame)
+        candidate = read_cache.pixels(candidate_path, frame)
+    else:
+        source = np.asarray(pydicom.dcmread(source_path).pixel_array)
+        candidate = np.asarray(pydicom.dcmread(candidate_path).pixel_array)
+        if source.ndim > 2:
+            index = max(0, (frame or 1) - 1)
+            source = source[index]
+            candidate = candidate[index]
     return source, candidate
 
 
@@ -825,6 +896,7 @@ def _evaluate_action(
     candidate_path: Path | None,
     patient_map: dict[str, str],
     uid_map: dict[str, str],
+    read_cache: _MidiReadCache | None = None,
 ) -> MidiActionResult:
     common: dict[str, Any] = {
         "action_id": action.action_id,
@@ -840,8 +912,12 @@ def _evaluate_action(
     if not candidate_path or not candidate_path.exists():
         return MidiActionResult(status="fail", reason="Candidate object could not be resolved", **common)
     try:
-        source = pydicom.dcmread(source_path)
-        candidate = pydicom.dcmread(candidate_path)
+        if read_cache:
+            source = read_cache.metadata(source_path)
+            candidate = read_cache.metadata(candidate_path)
+        else:
+            source = pydicom.dcmread(source_path, stop_before_pixels=True)
+            candidate = pydicom.dcmread(candidate_path, stop_before_pixels=True)
     except Exception as exc:
         return MidiActionResult(
             status="error", reason=f"DICOM read failed: {type(exc).__name__}: {exc}", **common
@@ -888,7 +964,9 @@ def _evaluate_action(
         reason = "UID mapping matched" if passed else "candidate UID did not match the supplied mapping"
     elif action.action in {"pixels hidden", "pixels retained"}:
         try:
-            source_pixels, candidate_pixels = _pixel_arrays(source_path, candidate_path, action.frame)
+            source_pixels, candidate_pixels = _pixel_arrays(
+                source_path, candidate_path, action.frame, read_cache
+            )
             if source_pixels.shape != candidate_pixels.shape:
                 passed = False
                 reason = "pixel array shape changed"
@@ -933,6 +1011,33 @@ def _summarize(results: list[MidiActionResult], key: str) -> list[dict[str, Any]
     return output
 
 
+def _update_summary_counts(counter: Counter[str], status: str) -> None:
+    counter["total"] += 1
+    counter[status] += 1
+    if status in {"pass", "fail"}:
+        counter["scored"] += 1
+
+
+def _summarize_counts(groups: dict[str, Counter[str]], key: str) -> list[dict[str, Any]]:
+    output = []
+    for name, counts in sorted(groups.items()):
+        scored = counts["scored"]
+        passed = counts["pass"]
+        output.append(
+            {
+                key: name,
+                "total": counts["total"],
+                "scored": scored,
+                "passed": passed,
+                "failed": counts["fail"],
+                "unresolved": counts["unresolved"],
+                "errors": counts["error"],
+                "score": passed / scored if scored else None,
+            }
+        )
+    return output
+
+
 def evaluate_midi(
     imported_dir: str | Path,
     candidate_root: str | Path,
@@ -941,6 +1046,9 @@ def evaluate_midi(
     patient_mapping: str | Path | None = None,
     uid_mapping: str | Path | None = None,
     source_root: str | Path | None = None,
+    embedded_results_limit: int | None = 10000,
+    cache_size: int = 16,
+    progress_interval: int = 100000,
 ) -> MidiEvaluation:
     imported = Path(imported_dir).resolve()
     candidate = Path(candidate_root).resolve()
@@ -960,7 +1068,6 @@ def evaluate_midi(
     output.mkdir(parents=True, exist_ok=True)
     _private_mode(output, 0o700)
     actions_path = _contained_path(imported, manifest_payload["actions_file"], label="MIDI actions file")
-    actions = read_actions(actions_path)
     patient_path = (
         Path(patient_mapping)
         if patient_mapping
@@ -982,59 +1089,115 @@ def evaluate_midi(
     patient_map = _read_mapping(patient_path)
     uid_map = _read_mapping(uid_path)
     candidate_by_uid, candidate_by_patient = _candidate_index(candidate)
+    read_cache = _MidiReadCache(max_items=cache_size)
     results: list[MidiActionResult] = []
+    status_counts: Counter[str] = Counter()
+    by_action_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    by_category_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    source_path_cache: dict[str, Path] = {}
+    candidate_path_cache: dict[str, Path | None] = {}
+    actions_seen = 0
+    results_csv_path = output / "midi_results.csv"
+    progress_path = output / "midi_evaluation_progress.jsonl"
+    fieldnames = [field.name for field in fields(MidiActionResult)]
 
-    for action in actions:
-        source_path = (
-            _contained_path(resolved_source_root, action.source_relative_path, label="MIDI source object")
-            if action.source_relative_path
-            else None
-        )
-        candidate_path = None
-        mapped_uid = uid_map.get(action.sop_instance_uid or "")
-        if mapped_uid:
-            candidate_path = candidate_by_uid.get(mapped_uid)
-        if candidate_path is None and action.sop_instance_uid:
-            candidate_path = candidate_by_uid.get(action.sop_instance_uid)
-        if candidate_path is None and action.patient_id:
-            mapped_patient = patient_map.get(action.patient_id, action.patient_id)
-            candidates = candidate_by_patient.get(mapped_patient, [])
-            if len(candidates) == 1:
-                candidate_path = candidates[0]
-        if candidate_path is None and action.source_relative_path:
-            possible = _contained_path(candidate, action.source_relative_path, label="MIDI candidate object")
-            if possible.exists():
-                candidate_path = possible
-        results.append(_evaluate_action(action, source_path, candidate_path, patient_map, uid_map))
+    with results_csv_path.open("w", newline="", encoding="utf-8") as handle:
+        writer = csv.DictWriter(handle, fieldnames=fieldnames)
+        writer.writeheader()
+        progress_handle = progress_path.open("w", encoding="utf-8") if progress_interval > 0 else None
+        try:
+            for action in iter_actions(actions_path):
+                actions_seen += 1
+                source_path = None
+                if action.source_relative_path:
+                    if action.source_relative_path not in source_path_cache:
+                        source_path_cache[action.source_relative_path] = _contained_path(
+                            resolved_source_root,
+                            action.source_relative_path,
+                            label="MIDI source object",
+                        )
+                    source_path = source_path_cache[action.source_relative_path]
+                candidate_path = None
+                mapped_uid = uid_map.get(action.sop_instance_uid or "")
+                if mapped_uid:
+                    candidate_path = candidate_by_uid.get(mapped_uid)
+                if candidate_path is None and action.sop_instance_uid:
+                    candidate_path = candidate_by_uid.get(action.sop_instance_uid)
+                if candidate_path is None and action.patient_id:
+                    mapped_patient = patient_map.get(action.patient_id, action.patient_id)
+                    candidates = candidate_by_patient.get(mapped_patient, [])
+                    if len(candidates) == 1:
+                        candidate_path = candidates[0]
+                if candidate_path is None and action.source_relative_path:
+                    cached_candidate = candidate_path_cache.get(action.source_relative_path)
+                    if action.source_relative_path not in candidate_path_cache:
+                        possible = _contained_path(
+                            candidate, action.source_relative_path, label="MIDI candidate object"
+                        )
+                        cached_candidate = possible if possible.exists() else None
+                        candidate_path_cache[action.source_relative_path] = cached_candidate
+                    candidate_path = cached_candidate
+                result = _evaluate_action(
+                    action, source_path, candidate_path, patient_map, uid_map, read_cache
+                )
+                writer.writerow(asdict(result))
+                if embedded_results_limit is None or len(results) < embedded_results_limit:
+                    results.append(result)
+                _update_summary_counts(status_counts, result.status)
+                _update_summary_counts(by_action_counts[result.action], result.status)
+                _update_summary_counts(
+                    by_category_counts[str(result.category or "unspecified")], result.status
+                )
+                if progress_handle and actions_seen % progress_interval == 0:
+                    progress_handle.write(
+                        json.dumps(
+                            {
+                                "actions": actions_seen,
+                                "passed": status_counts["pass"],
+                                "failed": status_counts["fail"],
+                                "unresolved": status_counts["unresolved"],
+                                "errors": status_counts["error"],
+                            },
+                            sort_keys=True,
+                        )
+                        + "\n"
+                    )
+                    progress_handle.flush()
+        finally:
+            if progress_handle:
+                progress_handle.close()
 
-    scored = sum(item.status in {"pass", "fail"} for item in results)
-    passed = sum(item.status == "pass" for item in results)
+    scored = status_counts["pass"] + status_counts["fail"]
+    passed = status_counts["pass"]
+    results_truncated = embedded_results_limit is not None and len(results) < actions_seen
     summary = {
-        "actions": len(results),
+        "actions": actions_seen,
         "scored": scored,
         "passed": passed,
-        "failed": sum(item.status == "fail" for item in results),
-        "unresolved": sum(item.status == "unresolved" for item in results),
-        "errors": sum(item.status == "error" for item in results),
+        "failed": status_counts["fail"],
+        "unresolved": status_counts["unresolved"],
+        "errors": status_counts["error"],
         "score": passed / scored if scored else None,
+        "results_csv": str(results_csv_path),
+        "results_embedded": len(results),
+        "results_truncated": results_truncated,
+        "progress_file": str(progress_path) if progress_interval > 0 else None,
     }
     evaluation = MidiEvaluation(
         dataset_name=manifest_payload["dataset_name"],
         results=results,
         summary=summary,
-        by_action=_summarize(results, "action"),
-        by_category=_summarize(results, "category"),
+        by_action=_summarize_counts(by_action_counts, "action"),
+        by_category=_summarize_counts(by_category_counts, "category"),
+        results_csv=str(results_csv_path),
+        results_embedded=len(results),
+        results_truncated=results_truncated,
     )
     payload = evaluation.to_dict()
     write_json(output / "midi_evaluation.json", payload, schema_name="midi-evaluation")
-    with (output / "midi_results.csv").open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(
-            handle, fieldnames=list(asdict(results[0]).keys()) if results else ["action_id"]
-        )
-        writer.writeheader()
-        for result in results:
-            writer.writerow(asdict(result))
-    restrict_file(output / "midi_results.csv")
+    restrict_file(results_csv_path)
+    if progress_path.exists():
+        restrict_file(progress_path)
     lines = [
         f"# MIDI-B Evaluation: {evaluation.dataset_name}",
         "",
@@ -1042,6 +1205,9 @@ def evaluate_midi(
         f"- Passed: {passed}/{scored} scored actions",
         f"- Unresolved: {summary['unresolved']}",
         f"- Errors: {summary['errors']}",
+        f"- Results CSV: {results_csv_path.name}",
+        f"- Embedded JSON results: {len(results)}"
+        + (" (truncated)" if results_truncated else ""),
         "",
         "| Action | Total | Passed | Failed | Unresolved | Score |",
         "|---|---:|---:|---:|---:|---:|",
