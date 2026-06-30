@@ -8,6 +8,7 @@ import re
 import shutil
 import sqlite3
 import tempfile
+import warnings
 from collections import Counter, defaultdict
 from collections.abc import Iterable
 from contextlib import closing
@@ -196,6 +197,62 @@ def _normalized_action(value: Any) -> str:
     return re.sub(r"\s+", " ", text)
 
 
+def _unwrap_answer_value(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    text = str(value).strip()
+    if len(text) >= 2 and text.startswith("<") and text.endswith(">"):
+        text = text[1:-1]
+    return text
+
+
+def _category_text(value: Any) -> str | None:
+    if value in (None, "", []):
+        return None
+    if isinstance(value, list):
+        cleaned = [str(item).strip() for item in value if str(item).strip()]
+        return ";".join(cleaned) if cleaned else None
+    if isinstance(value, dict):
+        return json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return _unwrap_answer_value(value)
+
+
+def _official_payload_column(columns: Iterable[str]) -> str | None:
+    payload = _find_column(columns, ("answer_data", "answerdata", "answers", "payload"))
+    sop = _find_column(columns, ALIASES["sop_instance_uid"])
+    return payload if payload and sop else None
+
+
+def _inspect_official_payloads(
+    connection: sqlite3.Connection,
+    table: str,
+    payload_column: str,
+    *,
+    sample_rows: int = 25,
+) -> tuple[list[str], int]:
+    quoted_table = table.replace('"', '""')
+    quoted_payload = payload_column.replace('"', '""')
+    values: set[str] = set()
+    rows_seen = 0
+    for (payload,) in connection.execute(
+        f'SELECT "{quoted_payload}" FROM "{quoted_table}" WHERE "{quoted_payload}" IS NOT NULL LIMIT ?',
+        (sample_rows,),
+    ):
+        rows_seen += 1
+        try:
+            decoded = json.loads(payload)
+        except (TypeError, json.JSONDecodeError):
+            continue
+        entries = decoded.values() if isinstance(decoded, dict) else decoded if isinstance(decoded, list) else []
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            action = _normalized_action(entry.get("action"))
+            if action in MIDI_ACTIONS:
+                values.add(action)
+    return sorted(values), rows_seen
+
+
 def inspect_answer_key(path: str | Path) -> list[dict[str, Any]]:
     db_path = Path(path)
     with closing(sqlite3.connect(db_path)) as connection:
@@ -226,14 +283,23 @@ def inspect_answer_key(path: str | Path) -> list[dict[str, Any]]:
                     action = _normalized_action(value)
                     values.append(action)
                     recognized += action in MIDI_ACTIONS
+            payload_column = _official_payload_column(columns)
+            payload_values: list[str] = []
+            payload_sample_rows = 0
+            if payload_column and not values:
+                payload_values, payload_sample_rows = _inspect_official_payloads(
+                    connection, table, payload_column
+                )
             output.append(
                 {
                     "table": table,
                     "rows": count,
                     "columns": columns,
                     "action_column": action_column,
-                    "recognized_action_values": sorted(set(values) & MIDI_ACTIONS),
-                    "recognized_action_value_count": recognized,
+                    "payload_column": payload_column,
+                    "payload_sample_rows": payload_sample_rows,
+                    "recognized_action_values": sorted((set(values) & MIDI_ACTIONS) | set(payload_values)),
+                    "recognized_action_value_count": recognized or len(payload_values),
                 }
             )
         return output
@@ -257,7 +323,7 @@ def _column_map(columns: list[str], overrides: dict[str, str] | None = None) -> 
 
 def _parse_tag(value: Any, tag_name: str | None = None) -> str | None:
     if value not in (None, ""):
-        text = str(value).strip().replace("(", "").replace(")", "").replace(",", "").replace(" ", "")
+        text = (_unwrap_answer_value(value) or "").replace("(", "").replace(")", "").replace(",", "").replace(" ", "")
         if text.lower().startswith("0x"):
             text = text[2:]
         try:
@@ -287,6 +353,34 @@ def _parse_bbox(row: sqlite3.Row, columns: dict[str, str | None]) -> tuple[int, 
     return cast(tuple[int, int, int, int], tuple(numbers[:4])) if len(numbers) >= 4 else None
 
 
+def _parse_official_payload_bbox(entry: dict[str, Any]) -> tuple[int, int, int, int] | None:
+    text = _unwrap_answer_value(entry.get("action_text"))
+    if not text:
+        return None
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        return None
+    top_left = payload.get("top_left")
+    bottom_right = payload.get("bottom_right")
+    if (
+        isinstance(top_left, list)
+        and isinstance(bottom_right, list)
+        and len(top_left) >= 2
+        and len(bottom_right) >= 2
+    ):
+        try:
+            return (
+                int(float(top_left[0])),
+                int(float(top_left[1])),
+                int(float(bottom_right[0])),
+                int(float(bottom_right[1])),
+            )
+        except (TypeError, ValueError):
+            return None
+    return None
+
+
 def _safe_ref(value: str | Path | None) -> str | None:
     if value is None:
         return None
@@ -305,9 +399,11 @@ def _scan_dicom_index(root: Path) -> tuple[dict[str, str], dict[str, str]]:
         if root != resolved and root not in resolved.parents:
             raise ValueError(f"DICOM source file escapes its configured root: {path}")
         try:
-            ds = pydicom.dcmread(
-                resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                ds = pydicom.dcmread(
+                    resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
+                )
         except Exception:
             continue
         relative = path.relative_to(root).as_posix()
@@ -396,6 +492,28 @@ def _read_mapping(path: Path | None) -> dict[str, str]:
     }
 
 
+def _row_text(row: sqlite3.Row, column: str | None) -> str | None:
+    if not column or row[column] in (None, ""):
+        return None
+    return str(row[column]).strip()
+
+
+def _relative_from_index(
+    *,
+    sop_uid: str | None,
+    patient_id: str | None,
+    by_uid: dict[str, str],
+    by_patient: dict[str, str],
+) -> str | None:
+    if sop_uid:
+        relative = by_uid.get(sop_uid)
+        if relative:
+            return relative
+    if patient_id:
+        return by_patient.get(patient_id)
+    return None
+
+
 def import_midi(
     answer_key: str | Path,
     dicom_root: str | Path,
@@ -427,104 +545,187 @@ def import_midi(
     output.mkdir(parents=True, exist_ok=True)
     _private_mode(output, 0o700)
     schema = inspect_answer_key(db_path)
-    candidate_tables = [item for item in schema if item["recognized_action_values"]]
+    candidate_tables = [
+        item for item in schema if item["recognized_action_values"] or item.get("payload_column")
+    ]
     if not candidate_tables:
         raise ValueError("No SQLite table containing recognized MIDI-B actions was found")
     by_uid, by_patient = _scan_dicom_index(images_root)
-    actions: list[MidiAction] = []
-
-    with closing(sqlite3.connect(db_path)) as connection:
-        connection.row_factory = sqlite3.Row
-        for table_info in candidate_tables:
-            table = table_info["table"]
-            quoted = table.replace('"', '""')
-            columns = _column_map(table_info["columns"], column_overrides)
-            if not columns["action"]:
-                continue
-            for row_number, row in enumerate(
-                connection.execute(
-                    f'SELECT rowid AS __rowid__, * FROM "{quoted}"'  # nosec B608
-                ),
-                1,
-            ):
-                action_name = _normalized_action(row[columns["action"]])
-                if action_name not in MIDI_ACTIONS:
-                    continue
-                sop_uid = (
-                    str(row[columns["sop_instance_uid"]]).strip()
-                    if columns["sop_instance_uid"] and row[columns["sop_instance_uid"]] not in (None, "")
-                    else None
-                )
-                patient_id = (
-                    str(row[columns["patient_id"]]).strip()
-                    if columns["patient_id"] and row[columns["patient_id"]] not in (None, "")
-                    else None
-                )
-                relative = (
-                    str(row[columns["relative_path"]]).strip()
-                    if columns["relative_path"] and row[columns["relative_path"]] not in (None, "")
-                    else None
-                )
-                if relative:
-                    try:
-                        if Path(relative).is_absolute():
-                            relative = Path(relative).resolve().relative_to(images_root).as_posix()
-                        elif PureWindowsPath(relative).is_absolute():
-                            relative = None
-                        else:
-                            relative = _validated_relative_path(relative)
-                    except ValueError:
-                        relative = None
-                if not relative and sop_uid:
-                    relative = by_uid.get(sop_uid)
-                if not relative and patient_id:
-                    relative = by_patient.get(patient_id)
-                tag_name = (
-                    str(row[columns["tag_name"]]).strip()
-                    if columns["tag_name"] and row[columns["tag_name"]] not in (None, "")
-                    else None
-                )
-                tag = _parse_tag(row[columns["tag"]] if columns["tag"] else None, tag_name)
-                value = (
-                    str(row[columns["value"]])
-                    if columns["value"] and row[columns["value"]] is not None
-                    else None
-                )
-                category = (
-                    str(row[columns["category"]]).strip()
-                    if columns["category"] and row[columns["category"]] not in (None, "")
-                    else None
-                )
-                frame = None
-                if columns["frame"] and row[columns["frame"]] not in (None, ""):
-                    try:
-                        frame = int(row[columns["frame"]])
-                    except (TypeError, ValueError):
-                        pass
-                raw_id = str(row["__rowid__"] if "__rowid__" in row.keys() else row_number)
-                action_id = hashlib.sha256(
-                    f"{table}|{raw_id}|{action_name}|{sop_uid}|{tag}|{value}".encode()
-                ).hexdigest()[:24]
-                actions.append(
-                    MidiAction(
-                        action_id=action_id,
-                        action=action_name,
-                        category=category,
-                        sop_instance_uid=sop_uid,
-                        patient_id=patient_id,
-                        tag=tag,
-                        tag_name=tag_name,
-                        value=value,
-                        source_relative_path=relative,
-                        frame=frame,
-                        bbox_xyxy=_parse_bbox(row, columns),
-                        raw_table=table,
-                        raw_row_id=raw_id,
-                    )
-                )
-
     actions_path = output / "actions.jsonl"
-    _write_private_jsonl(actions_path, actions)
+    action_count = 0
+    action_counts: Counter[str] = Counter()
+    category_counts: Counter[str] = Counter()
+    unresolved_source_paths = 0
+
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{actions_path.name}.", dir=actions_path.parent)
+    temporary = Path(temporary_name)
+
+    def record_action(handle: Any, action: MidiAction) -> None:
+        nonlocal action_count, unresolved_source_paths
+        handle.write(json.dumps(asdict(action), ensure_ascii=False) + "\n")
+        action_count += 1
+        action_counts[action.action] += 1
+        category_counts[action.category or "unspecified"] += 1
+        unresolved_source_paths += action.source_relative_path is None
+
+    try:
+        with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+            with closing(sqlite3.connect(db_path)) as connection:
+                connection.row_factory = sqlite3.Row
+                for table_info in candidate_tables:
+                    table = table_info["table"]
+                    quoted = table.replace('"', '""')
+                    payload_column = table_info.get("payload_column")
+                    if payload_column:
+                        sop_column = _find_column(table_info["columns"], ALIASES["sop_instance_uid"])
+                        patient_column = _find_column(table_info["columns"], ALIASES["patient_id"])
+                        payload_quoted = payload_column.replace('"', '""')
+                        for row in connection.execute(
+                            f'SELECT rowid AS __rowid__, * FROM "{quoted}" WHERE "{payload_quoted}" IS NOT NULL'
+                        ):
+                            sop_uid = _row_text(row, sop_column)
+                            patient_id = _row_text(row, patient_column)
+                            relative = _relative_from_index(
+                                sop_uid=sop_uid,
+                                patient_id=patient_id,
+                                by_uid=by_uid,
+                                by_patient=by_patient,
+                            )
+                            try:
+                                payload = json.loads(row[payload_column])
+                            except (TypeError, json.JSONDecodeError):
+                                continue
+                            entries = (
+                                payload.items()
+                                if isinstance(payload, dict)
+                                else enumerate(payload)
+                                if isinstance(payload, list)
+                                else []
+                            )
+                            for payload_key, entry in entries:
+                                if not isinstance(entry, dict):
+                                    continue
+                                action_name = _normalized_action(entry.get("action"))
+                                if action_name not in MIDI_ACTIONS:
+                                    continue
+                                tag_name = _unwrap_answer_value(entry.get("tag_name"))
+                                tag = _parse_tag(entry.get("tag") or entry.get("tag_ds"), tag_name)
+                                value = _unwrap_answer_value(entry.get("value"))
+                                category = _category_text(entry.get("answer_category"))
+                                raw_id = f"{row['__rowid__']}:{payload_key}"
+                                action_id = hashlib.sha256(
+                                    f"{table}|{raw_id}|{action_name}|{sop_uid}|{tag}|{value}".encode()
+                                ).hexdigest()[:24]
+                                record_action(
+                                    handle,
+                                    MidiAction(
+                                        action_id=action_id,
+                                        action=action_name,
+                                        category=category,
+                                        sop_instance_uid=sop_uid,
+                                        patient_id=patient_id,
+                                        tag=tag,
+                                        tag_name=tag_name,
+                                        value=value,
+                                        source_relative_path=relative,
+                                        bbox_xyxy=(
+                                            _parse_official_payload_bbox(entry)
+                                            if action_name == "pixels hidden"
+                                            else None
+                                        ),
+                                        raw_table=table,
+                                        raw_row_id=raw_id,
+                                    ),
+                                )
+                        continue
+                    columns = _column_map(table_info["columns"], column_overrides)
+                    if not columns["action"]:
+                        continue
+                    for row_number, row in enumerate(
+                        connection.execute(
+                            f'SELECT rowid AS __rowid__, * FROM "{quoted}"'  # nosec B608
+                        ),
+                        1,
+                    ):
+                        action_name = _normalized_action(row[columns["action"]])
+                        if action_name not in MIDI_ACTIONS:
+                            continue
+                        sop_uid = _row_text(row, columns["sop_instance_uid"])
+                        patient_id = _row_text(row, columns["patient_id"])
+                        relative = (
+                            str(row[columns["relative_path"]]).strip()
+                            if columns["relative_path"] and row[columns["relative_path"]] not in (None, "")
+                            else None
+                        )
+                        if relative:
+                            try:
+                                if Path(relative).is_absolute():
+                                    relative = Path(relative).resolve().relative_to(images_root).as_posix()
+                                elif PureWindowsPath(relative).is_absolute():
+                                    relative = None
+                                else:
+                                    relative = _validated_relative_path(relative)
+                            except ValueError:
+                                relative = None
+                        if not relative:
+                            relative = _relative_from_index(
+                                sop_uid=sop_uid,
+                                patient_id=patient_id,
+                                by_uid=by_uid,
+                                by_patient=by_patient,
+                            )
+                        tag_name = (
+                            str(row[columns["tag_name"]]).strip()
+                            if columns["tag_name"] and row[columns["tag_name"]] not in (None, "")
+                            else None
+                        )
+                        tag = _parse_tag(row[columns["tag"]] if columns["tag"] else None, tag_name)
+                        value = (
+                            str(row[columns["value"]])
+                            if columns["value"] and row[columns["value"]] is not None
+                            else None
+                        )
+                        category = (
+                            str(row[columns["category"]]).strip()
+                            if columns["category"] and row[columns["category"]] not in (None, "")
+                            else None
+                        )
+                        frame = None
+                        if columns["frame"] and row[columns["frame"]] not in (None, ""):
+                            try:
+                                frame = int(row[columns["frame"]])
+                            except (TypeError, ValueError):
+                                pass
+                        raw_id = str(row["__rowid__"] if "__rowid__" in row.keys() else row_number)
+                        action_id = hashlib.sha256(
+                            f"{table}|{raw_id}|{action_name}|{sop_uid}|{tag}|{value}".encode()
+                        ).hexdigest()[:24]
+                        record_action(
+                            handle,
+                            MidiAction(
+                                action_id=action_id,
+                                action=action_name,
+                                category=category,
+                                sop_instance_uid=sop_uid,
+                                patient_id=patient_id,
+                                tag=tag,
+                                tag_name=tag_name,
+                                value=value,
+                                source_relative_path=relative,
+                                frame=frame,
+                                bbox_xyxy=_parse_bbox(row, columns),
+                                raw_table=table,
+                                raw_row_id=raw_id,
+                            ),
+                        )
+            handle.flush()
+            os.fsync(handle.fileno())
+        temporary.replace(actions_path)
+        _private_mode(actions_path, 0o600)
+    except Exception:
+        temporary.unlink(missing_ok=True)
+        raise
+
     patient_target = output / "patient_mapping.csv" if patient_mapping else None
     uid_target = output / "uid_mapping.csv" if uid_mapping else None
     if patient_mapping and patient_target is not None:
@@ -533,22 +734,28 @@ def import_midi(
     if uid_mapping and uid_target is not None:
         shutil.copyfile(Path(uid_mapping), uid_target)
         _private_mode(uid_target, 0o600)
-    action_counts = Counter(item.action for item in actions)
-    category_counts = Counter(item.category or "unspecified" for item in actions)
+    manifest_tables: list[dict[str, Any]] = []
+    for table_info in schema:
+        table_payload = dict(table_info)
+        if table_payload.get("payload_column") and action_counts:
+            table_payload["recognized_action_values"] = sorted(action_counts)
+            table_payload["recognized_action_value_count"] = len(action_counts)
+            table_payload["recognized_action_values_source"] = "full_import"
+        manifest_tables.append(table_payload)
     manifest = MidiImportManifest(
         schema_version="1.0",
         dataset_name=dataset_name,
         source_answer_key_sha256=_sha256(db_path),
         source_answer_key_name=db_path.name,
         dicom_root=str(images_root),
-        action_count=len(actions),
+        action_count=action_count,
         action_counts=dict(sorted(action_counts.items())),
         category_counts=dict(sorted(category_counts.items())),
-        tables=schema,
+        tables=manifest_tables,
         patient_mapping=patient_target.name if patient_target else None,
         uid_mapping=uid_target.name if uid_target else None,
         actions_file=actions_path.name,
-        unresolved_source_paths=sum(item.source_relative_path is None for item in actions),
+        unresolved_source_paths=unresolved_source_paths,
     )
     write_json(output / "midi_manifest.json", manifest.to_dict(), schema_name="midi-import")
     return manifest
@@ -579,9 +786,11 @@ def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]
         if root != resolved and root not in resolved.parents:
             raise ValueError(f"DICOM candidate file escapes its configured root: {path}")
         try:
-            ds = pydicom.dcmread(
-                resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
-            )
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore", UserWarning)
+                ds = pydicom.dcmread(
+                    resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
+                )
         except Exception:
             continue
         if getattr(ds, "SOPInstanceUID", None):

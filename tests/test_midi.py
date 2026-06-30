@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import csv
+import json
 import sqlite3
 from contextlib import closing
 from copy import deepcopy
@@ -9,7 +10,7 @@ import numpy as np
 from pydicom.dataset import FileDataset, FileMetaDataset
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
-from dicom_privacy_auditor.benchmark.midi import evaluate_midi, import_midi, inspect_answer_key
+from dicom_privacy_auditor.benchmark.midi import evaluate_midi, import_midi, inspect_answer_key, read_actions
 
 
 def _write(path, *, patient_id, sop_uid, study_uid, study_date, description, pixels):
@@ -263,6 +264,72 @@ def test_mapping_reader_accepts_descriptive_public_headers(tmp_path):
         writer.writerow(["OriginalPatientID", "AnonymizedPatientID"])
         writer.writerow(["P001", "MIDI001"])
     assert _read_mapping(path) == {"P001": "MIDI001"}
+
+
+def test_midi_import_accepts_official_answer_data_payload(tmp_path):
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    sop_uid = generate_uid()
+    patient_id = "8371727310"
+    _write(
+        source_root / "case.dcm",
+        patient_id=patient_id,
+        sop_uid=sop_uid,
+        study_uid=generate_uid(),
+        study_date="20200101",
+        description="SECRET SAFE",
+        pixels=np.zeros((8, 8), dtype=np.uint8),
+    )
+    db = tmp_path / "official.sqlite"
+    payload = {
+        "0": {
+            "scope": "<Instance>",
+            "tag": "<(0008,0012)>",
+            "tag_ds": "<(0008,0012)>",
+            "tag_name": "<Instance Creation Date>",
+            "value": "<20151225>",
+            "action": "<date_shifted>",
+            "action_text": "<20151225>",
+            "answer_category": ["date"],
+        },
+        "1": {
+            "scope": "<Instance>",
+            "tag": None,
+            "tag_ds": None,
+            "tag_name": None,
+            "value": None,
+            "action": "<pixels_hidden>",
+            "action_text": '<{"text":"JT","top_left":[2,3],"bottom_right":[5,7]}>',
+            "answer_category": [],
+        },
+    }
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            """CREATE TABLE answer_data (
+                PatientID TEXT,
+                SOPInstanceUID TEXT,
+                AnswerData TEXT
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answer_data VALUES (?, ?, ?)",
+            (patient_id, sop_uid, json.dumps(payload)),
+        )
+        connection.commit()
+
+    schema = inspect_answer_key(db)
+    assert schema[0]["payload_column"] == "AnswerData"
+    assert schema[0]["recognized_action_values"] == ["date shifted", "pixels hidden"]
+    imported = tmp_path / "imported"
+    manifest = import_midi(db, source_root, imported)
+    assert manifest.action_count == 2
+    assert manifest.unresolved_source_paths == 0
+    actions = read_actions(imported / "actions.jsonl")
+    assert actions[0].tag == "00080012"
+    assert actions[0].tag_name == "Instance Creation Date"
+    assert actions[0].value == "20151225"
+    assert actions[0].source_relative_path == "case.dcm"
+    assert actions[1].bbox_xyxy == (2, 3, 5, 7)
 
 
 def test_midi_import_uses_private_permissions_and_rejects_overlap(tmp_path):
