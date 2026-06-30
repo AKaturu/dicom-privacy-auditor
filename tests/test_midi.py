@@ -53,6 +53,30 @@ def _write_without_pixels(path, *, patient_id, sop_uid, study_uid):
     ds.save_as(path, enforce_file_format=True)
 
 
+def _write_rgb_without_planar_configuration(path, *, patient_id, sop_uid, study_uid):
+    meta = FileMetaDataset()
+    meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+    meta.MediaStorageSOPInstanceUID = sop_uid
+    meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
+    ds.SOPClassUID = SecondaryCaptureImageStorage
+    ds.SOPInstanceUID = sop_uid
+    ds.StudyInstanceUID = study_uid
+    ds.SeriesInstanceUID = generate_uid()
+    ds.PatientID = patient_id
+    ds.Modality = "OT"
+    ds.Rows = 2
+    ds.Columns = 2
+    ds.SamplesPerPixel = 3
+    ds.PhotometricInterpretation = "RGB"
+    ds.BitsAllocated = 8
+    ds.BitsStored = 8
+    ds.HighBit = 7
+    ds.PixelRepresentation = 0
+    ds.PixelData = bytes(range(12))
+    ds.save_as(path, enforce_file_format=True)
+
+
 def _mapping(path, rows):
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
@@ -336,6 +360,48 @@ def test_midi_pixel_action_without_pixel_data_is_unresolved(tmp_path):
     assert evaluation.summary["errors"] == 0
     assert evaluation.results[0].status == "unresolved"
     assert "Pixel comparison unavailable" in evaluation.results[0].reason
+
+
+def test_midi_pixel_action_with_missing_planar_configuration_is_unresolved(tmp_path):
+    source_root = tmp_path / "source"
+    candidate_root = tmp_path / "candidate"
+    source_root.mkdir()
+    candidate_root.mkdir()
+    old_sop, new_sop = generate_uid(), generate_uid()
+    _write_rgb_without_planar_configuration(
+        source_root / "case.dcm",
+        patient_id="OLDPAT",
+        sop_uid=old_sop,
+        study_uid=generate_uid(),
+    )
+    _write_rgb_without_planar_configuration(
+        candidate_root / "case.dcm",
+        patient_id="NEWPAT",
+        sop_uid=new_sop,
+        study_uid=generate_uid(),
+    )
+    db = tmp_path / "answer_key.sqlite"
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            """CREATE TABLE answer_key (
+                action TEXT, sop_instance_uid TEXT, patient_id TEXT, relative_path TEXT
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answer_key VALUES (?, ?, ?, ?)",
+            ("pixels retained", old_sop, "OLDPAT", "case.dcm"),
+        )
+        connection.commit()
+    uid_map = tmp_path / "uid.csv"
+    _mapping(uid_map, [(old_sop, new_sop)])
+    imported = tmp_path / "imported"
+    import_midi(db, source_root, imported, uid_mapping=uid_map)
+
+    evaluation = evaluate_midi(imported, candidate_root, tmp_path / "evaluation")
+    assert evaluation.summary["unresolved"] == 1
+    assert evaluation.summary["errors"] == 0
+    assert evaluation.results[0].status == "unresolved"
+    assert "Planar Configuration" in evaluation.results[0].reason
 
 
 def test_midi_import_accepts_official_answer_data_payload(tmp_path):
