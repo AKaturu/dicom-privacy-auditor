@@ -41,22 +41,25 @@ def _load_uid_new_to_old(path: Path) -> dict[str, str]:
 
 class _AnswerPayloadLookup:
     def __init__(self, path: Path, *, cache_size: int = 2048) -> None:
-        self.connection = sqlite3.connect(path)
         self.cache_size = cache_size
+        self.rows: dict[str, tuple[str, str]] = {}
         self.cache: OrderedDict[str, tuple[str, dict[str, Any]]] = OrderedDict()
+        with sqlite3.connect(path) as connection:
+            rows = connection.execute("SELECT rowid, SOPInstanceUID, AnswerData FROM answer_data")
+            for rowid, sop_instance_uid, payload_text in rows:
+                if sop_instance_uid not in (None, ""):
+                    self.rows[str(sop_instance_uid)] = (str(rowid), str(payload_text))
 
     def close(self) -> None:
-        self.connection.close()
+        self.cache.clear()
+        self.rows.clear()
 
     def _load_payload(self, sop_instance_uid: str) -> tuple[str, dict[str, Any]] | None:
         cached = self.cache.get(sop_instance_uid)
         if cached is not None:
             self.cache.move_to_end(sop_instance_uid)
             return cached
-        row = self.connection.execute(
-            "SELECT rowid, AnswerData FROM answer_data WHERE SOPInstanceUID = ?",
-            (sop_instance_uid,),
-        ).fetchone()
+        row = self.rows.get(sop_instance_uid)
         if row is None:
             return None
         rowid, payload_text = row
