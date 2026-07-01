@@ -4,6 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
+from .disagreements import analyze_parity_disagreements
 from .evidence import (
     MAX_EVIDENCE_ARCHIVE_MEMBERS,
     MAX_EVIDENCE_UNCOMPRESSED_BYTES,
@@ -93,6 +94,17 @@ def build_parser() -> argparse.ArgumentParser:
     normalize.add_argument("uid_mapping", type=Path)
     normalize.add_argument("output", type=Path)
     normalize.add_argument("--unmatched-output", type=Path)
+    review = sub.add_parser(
+        "review-disagreements",
+        help="Summarize evaluator disagreement clusters without exposing raw values",
+    )
+    review.add_argument("internal", type=Path)
+    review.add_argument("official", type=Path)
+    review.add_argument("output", type=Path)
+    review.add_argument("--report-markdown", type=Path)
+    review.add_argument("--actions-jsonl", type=Path)
+    review.add_argument("--top-n", type=int, default=25)
+    review.add_argument("--sample-limit", type=int, default=0)
     evidence = sub.add_parser(
         "evidence-package", help="Build a redacted, checksummed campaign evidence package"
     )
@@ -167,6 +179,18 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(payload, indent=2))
         return 0 if payload["unmatched_rows"] == 0 else 2
+    if args.command == "review-disagreements":
+        payload = analyze_parity_disagreements(
+            args.internal,
+            args.official,
+            args.output,
+            report_markdown=args.report_markdown,
+            actions_jsonl=args.actions_jsonl,
+            top_n=args.top_n,
+            sample_limit=args.sample_limit,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
     if args.command == "evidence-package":
         payload = build_evidence_package(
             args.workspace, args.destination, campaign_id=args.campaign_id, overwrite=args.overwrite

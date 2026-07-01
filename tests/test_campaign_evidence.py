@@ -5,6 +5,7 @@ import sqlite3
 
 import pytest
 
+from dicom_privacy_auditor.campaign.disagreements import analyze_parity_disagreements
 from dicom_privacy_auditor.campaign.evidence import (
     archive_evidence_package,
     build_evidence_package,
@@ -147,6 +148,62 @@ def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
     assert result["unmatched_rows"] == 0
     assert rows[0] == "action_id,action,status"
     assert rows[1] == "9020ba1829209a3c5f6cea14,text retained,pass"
+
+
+def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
+    internal = tmp_path / "internal.csv"
+    internal.write_text(
+        "action_id,action,category,status,reason,source_present,candidate_present\n"
+        "a,text retained,dicom_standard,pass,retained,True,True\n"
+        "b,text retained,patient_name,fail,missing token,True,True\n"
+        "c,tag retained,dicom_standard,pass,tag retained,True,True\n"
+        "d,pixels retained,,unresolved,Source object could not be resolved,False,True\n",
+        encoding="utf-8",
+    )
+    official = tmp_path / "official.csv"
+    official.write_text(
+        "action_id,action,status\n"
+        "a,text retained,pass\n"
+        "b,text retained,pass\n"
+        "c,tag retained,fail\n"
+        "d,pixels retained,pass\n"
+        "e,text removed,pass\n",
+        encoding="utf-8",
+    )
+    actions = tmp_path / "actions.jsonl"
+    actions.write_text(
+        json.dumps({"action_id": "b", "tag_name": "Patient Name"}) + "\n"
+        + json.dumps({"action_id": "c", "tag_name": "Image Type"}) + "\n"
+        + json.dumps({"action_id": "d", "tag_name": "Pixel Data"}) + "\n",
+        encoding="utf-8",
+    )
+
+    result = analyze_parity_disagreements(
+        internal,
+        official,
+        tmp_path / "review.json",
+        report_markdown=tmp_path / "review.md",
+        actions_jsonl=actions,
+        top_n=10,
+        sample_limit=2,
+    )
+
+    assert result["internal_row_count"] == 4
+    assert result["official_row_count"] == 5
+    assert result["exact_status_matches"] == 1
+    assert result["disagreement_count"] == 4
+    assert result["confusion"]["fail|pass"] == 1
+    assert result["confusion"]["missing|pass"] == 1
+    assert result["top_action_status_disagreements"][0]["count"] == 1
+    assert {row["tag_name"] for row in result["tag_enrichment"]["top_tag_names"]} >= {
+        "Patient Name",
+        "Image Type",
+        "Pixel Data",
+    }
+    assert len(result["sample_disagreements"]) == 2
+    assert (tmp_path / "review.md").read_text(encoding="utf-8").startswith(
+        "# MIDI-B Parity Disagreement Review"
+    )
 
 
 def test_evidence_package_redacts_paths_and_checksums(tmp_path):

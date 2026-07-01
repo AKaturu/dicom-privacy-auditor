@@ -125,6 +125,23 @@ dicom-privacy-campaign parity-stream \
   workspaces/midi-live/reports/orthanc-parity.json
 ```
 
+If parity is not exact, generate an aggregate disagreement review before making
+performance claims. The review summarizes action, category, reason, and
+status-direction clusters without exporting raw answer values or DICOM paths:
+
+```bash
+dicom-privacy-campaign review-disagreements \
+  workspaces/midi-live/evaluations/orthanc/midi_results.csv \
+  workspaces/midi-live/official/orthanc-normalized.csv \
+  workspaces/midi-live/reports/orthanc-disagreement-review.json \
+  --report-markdown workspaces/midi-live/reports/ORTHANC_DISAGREEMENT_REVIEW.md \
+  --top-n 30
+```
+
+For private local reviewer work, add `--actions-jsonl imported/actions.jsonl`
+to enrich the report with aggregate tag-name clusters. Do not publish raw action
+ledgers, answer values, source paths, or candidate DICOM outputs.
+
 For smaller JSON-only experiments, the legacy in-memory comparator is still available:
 
 ```bash
