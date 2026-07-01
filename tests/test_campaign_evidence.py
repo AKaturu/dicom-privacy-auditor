@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
 import pytest
 
@@ -12,6 +13,7 @@ from dicom_privacy_auditor.campaign.evidence import (
     generate_review_sample,
     verify_evidence_package,
 )
+from dicom_privacy_auditor.campaign.official_midi import normalize_official_midi_results
 
 
 def _evaluation(path, rows):
@@ -86,6 +88,52 @@ def test_streaming_parity_rejects_duplicate_action_ids(tmp_path):
 
     with pytest.raises(ValueError, match="duplicate internal action_id"):
         compare_evaluators_streaming(left, right, tmp_path / "parity.json")
+
+
+def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
+    answer_db = tmp_path / "answer.db"
+    with sqlite3.connect(answer_db) as connection:
+        connection.execute("CREATE TABLE answer_data (SOPInstanceUID TEXT)")
+        connection.execute(
+            "INSERT INTO answer_data (SOPInstanceUID) VALUES (?)",
+            ("1.2.840.old",),
+        )
+
+    official_db = tmp_path / "official.db"
+    with sqlite3.connect(official_db) as connection:
+        connection.execute(
+            """
+            CREATE TABLE validation_results (
+                check_index INTEGER,
+                check_passed INTEGER,
+                action TEXT,
+                answer_value TEXT,
+                instance TEXT,
+                tag TEXT,
+                tag_name TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO validation_results
+            (check_index, check_passed, action, answer_value, instance, tag, tag_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (0, 1, "<text_retained>", "<ISO_IR 100>", "1.2.840.new", "<(0008,0005)>", "Specific Character Set"),
+        )
+
+    mapping = tmp_path / "uid_mapping.csv"
+    mapping.write_text("id_old,id_new\n1.2.840.old,1.2.840.new\n", encoding="utf-8")
+
+    output = tmp_path / "official-normalized.csv"
+    result = normalize_official_midi_results(official_db, answer_db, mapping, output)
+
+    rows = output.read_text(encoding="utf-8").splitlines()
+    assert result["normalized_rows"] == 1
+    assert result["unmatched_rows"] == 0
+    assert rows[0] == "action_id,action,status"
+    assert rows[1] == "9020ba1829209a3c5f6cea14,text retained,pass"
 
 
 def test_evidence_package_redacts_paths_and_checksums(tmp_path):

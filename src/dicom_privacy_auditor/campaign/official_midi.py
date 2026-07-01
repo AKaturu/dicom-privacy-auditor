@@ -1,0 +1,231 @@
+from __future__ import annotations
+
+import csv
+import hashlib
+import os
+import sqlite3
+import tempfile
+from pathlib import Path
+from typing import Any
+
+from ..benchmark.midi import MIDI_ACTIONS, _normalized_action, _parse_tag, _unwrap_answer_value
+from ..permissions import restrict_file
+
+
+def _sha256(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _clean_uid(value: Any) -> str:
+    return str(_unwrap_answer_value(value) or "").strip()
+
+
+def _load_uid_new_to_old(path: Path) -> dict[str, str]:
+    mapping: dict[str, str] = {}
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.DictReader(handle)
+        if not reader.fieldnames or {"id_old", "id_new"} - set(reader.fieldnames):
+            raise ValueError("UID mapping CSV must contain id_old and id_new columns")
+        for row in reader:
+            old_uid, new_uid = _clean_uid(row.get("id_old")), _clean_uid(row.get("id_new"))
+            if old_uid and new_uid and new_uid not in mapping:
+                mapping[new_uid] = old_uid
+    return mapping
+
+
+def _load_answer_rowids(path: Path) -> dict[str, str]:
+    with sqlite3.connect(path) as connection:
+        rows = connection.execute("SELECT rowid, SOPInstanceUID FROM answer_data")
+        return {str(sop_uid): str(rowid) for rowid, sop_uid in rows if sop_uid not in (None, "")}
+
+
+def _status_from_check_passed(value: Any) -> str:
+    if value is None:
+        return "unresolved"
+    text = str(value).strip().lower()
+    if text in {"1", "1.0", "true", "pass", "passed", "yes"}:
+        return "pass"
+    if text in {"0", "0.0", "false", "fail", "failed", "no"}:
+        return "fail"
+    return text or "unresolved"
+
+
+def _official_rows(path: Path) -> tuple[list[str], sqlite3.Connection]:
+    connection = sqlite3.connect(path)
+    connection.row_factory = sqlite3.Row
+    try:
+        columns = [row[1] for row in connection.execute("PRAGMA table_info(validation_results)")]
+        required = {"check_index", "check_passed", "action", "answer_value", "instance"}
+        missing = sorted(required - set(columns))
+        if missing:
+            raise ValueError(f"official validation_results table is missing columns: {', '.join(missing)}")
+        return columns, connection
+    except Exception:
+        connection.close()
+        raise
+
+
+def _action_id(
+    *,
+    answer_rowid: str,
+    payload_key: str,
+    action: str,
+    sop_instance_uid: str,
+    tag: str | None,
+    value: str | None,
+) -> str:
+    raw_id = f"{answer_rowid}:{payload_key}"
+    payload = f"answer_data|{raw_id}|{action}|{sop_instance_uid}|{tag}|{value}"
+    return hashlib.sha256(payload.encode()).hexdigest()[:24]
+
+
+def normalize_official_midi_results(
+    official_db: str | Path,
+    answer_db: str | Path,
+    uid_mapping: str | Path,
+    output: str | Path,
+    *,
+    unmatched_output: str | Path | None = None,
+) -> dict[str, Any]:
+    """Convert official MIDI validator SQLite rows to action_id/action/status CSV rows."""
+    official_path = Path(official_db)
+    answer_path = Path(answer_db)
+    uid_mapping_path = Path(uid_mapping)
+    destination = Path(output)
+    unmatched_destination = Path(unmatched_output) if unmatched_output else None
+    for label, path in (
+        ("official_db", official_path),
+        ("answer_db", answer_path),
+        ("uid_mapping", uid_mapping_path),
+    ):
+        if not path.is_file():
+            raise FileNotFoundError(f"{label} not found: {path}")
+
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    if unmatched_destination:
+        unmatched_destination.parent.mkdir(parents=True, exist_ok=True)
+
+    uid_new_to_old = _load_uid_new_to_old(uid_mapping_path)
+    answer_rowids = _load_answer_rowids(answer_path)
+    _, connection = _official_rows(official_path)
+
+    descriptor, temporary_name = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
+    temporary = Path(temporary_name)
+    unmatched_temporary: Path | None = None
+    unmatched_handle = None
+    if unmatched_destination:
+        unmatched_descriptor, unmatched_name = tempfile.mkstemp(
+            prefix=f".{unmatched_destination.name}.", dir=unmatched_destination.parent
+        )
+        unmatched_temporary = Path(unmatched_name)
+        unmatched_handle = os.fdopen(unmatched_descriptor, "w", newline="", encoding="utf-8")
+
+    total_rows = 0
+    normalized_rows = 0
+    unmatched_rows = 0
+    action_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    try:
+        with os.fdopen(descriptor, "w", newline="", encoding="utf-8") as handle:
+            writer = csv.DictWriter(handle, fieldnames=["action_id", "action", "status"])
+            writer.writeheader()
+            unmatched_writer = None
+            if unmatched_handle:
+                unmatched_writer = csv.DictWriter(
+                    unmatched_handle,
+                    fieldnames=[
+                        "official_rowid",
+                        "instance",
+                        "old_sop_instance_uid",
+                        "check_index",
+                        "action",
+                        "reason",
+                    ],
+                )
+                unmatched_writer.writeheader()
+
+            query = "SELECT rowid AS __official_rowid__, * FROM validation_results"
+            for row in connection.execute(query):
+                total_rows += 1
+                candidate_instance = _clean_uid(row["instance"])
+                old_sop = uid_new_to_old.get(candidate_instance, candidate_instance)
+                answer_rowid = answer_rowids.get(old_sop)
+                payload_key = str(row["check_index"]).strip()
+                action = _normalized_action(row["action"])
+                if not answer_rowid or not payload_key or action not in MIDI_ACTIONS:
+                    unmatched_rows += 1
+                    if unmatched_writer:
+                        unmatched_writer.writerow(
+                            {
+                                "official_rowid": row["__official_rowid__"],
+                                "instance": candidate_instance,
+                                "old_sop_instance_uid": old_sop,
+                                "check_index": payload_key,
+                                "action": action,
+                                "reason": "missing_answer_row_or_unrecognized_action",
+                            }
+                        )
+                    continue
+                tag = _parse_tag(
+                    row["tag"] if "tag" in row.keys() else None,
+                    _unwrap_answer_value(row["tag_name"]) if "tag_name" in row.keys() else None,
+                )
+                value = _unwrap_answer_value(row["answer_value"])
+                status = _status_from_check_passed(row["check_passed"])
+                writer.writerow(
+                    {
+                        "action_id": _action_id(
+                            answer_rowid=answer_rowid,
+                            payload_key=payload_key,
+                            action=action,
+                            sop_instance_uid=old_sop,
+                            tag=tag,
+                            value=value,
+                        ),
+                        "action": action,
+                        "status": status,
+                    }
+                )
+                normalized_rows += 1
+                action_counts[action] = action_counts.get(action, 0) + 1
+                status_counts[status] = status_counts.get(status, 0) + 1
+
+            handle.flush()
+            os.fsync(handle.fileno())
+            if unmatched_handle:
+                unmatched_handle.flush()
+                os.fsync(unmatched_handle.fileno())
+
+        temporary.replace(destination)
+        restrict_file(destination)
+        if unmatched_destination and unmatched_temporary:
+            unmatched_handle.close()
+            unmatched_handle = None
+            unmatched_temporary.replace(unmatched_destination)
+            restrict_file(unmatched_destination)
+
+        return {
+            "schema_version": "1.0",
+            "official_db_sha256": _sha256(official_path),
+            "answer_db_sha256": _sha256(answer_path),
+            "uid_mapping_sha256": _sha256(uid_mapping_path),
+            "output": str(destination),
+            "output_sha256": _sha256(destination),
+            "total_rows": total_rows,
+            "normalized_rows": normalized_rows,
+            "unmatched_rows": unmatched_rows,
+            "unmatched_output": str(unmatched_destination) if unmatched_destination else None,
+            "action_counts": dict(sorted(action_counts.items())),
+            "status_counts": dict(sorted(status_counts.items())),
+        }
+    finally:
+        connection.close()
+        if unmatched_handle:
+            unmatched_handle.close()
+        temporary.unlink(missing_ok=True)
+        if unmatched_temporary:
+            unmatched_temporary.unlink(missing_ok=True)

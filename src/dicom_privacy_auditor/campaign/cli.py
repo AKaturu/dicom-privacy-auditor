@@ -21,6 +21,7 @@ from .midi_live import (
     run_campaign,
     run_tool,
 )
+from .official_midi import normalize_official_midi_results
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -83,6 +84,15 @@ def build_parser() -> argparse.ArgumentParser:
     parity_stream.add_argument("official", type=Path)
     parity_stream.add_argument("output", type=Path)
     parity_stream.add_argument("--discrepancy-limit", type=int, default=10_000)
+    normalize = sub.add_parser(
+        "normalize-official-midi",
+        help="Normalize official MIDI validator SQLite results to action_id/action/status CSV",
+    )
+    normalize.add_argument("official_db", type=Path)
+    normalize.add_argument("answer_db", type=Path)
+    normalize.add_argument("uid_mapping", type=Path)
+    normalize.add_argument("output", type=Path)
+    normalize.add_argument("--unmatched-output", type=Path)
     evidence = sub.add_parser(
         "evidence-package", help="Build a redacted, checksummed campaign evidence package"
     )
@@ -147,6 +157,16 @@ def main(argv: list[str] | None = None) -> int:
         )
         print(json.dumps(payload, indent=2))
         return 0 if payload["discrepancy_count"] == 0 else 2
+    if args.command == "normalize-official-midi":
+        payload = normalize_official_midi_results(
+            args.official_db,
+            args.answer_db,
+            args.uid_mapping,
+            args.output,
+            unmatched_output=args.unmatched_output,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["unmatched_rows"] == 0 else 2
     if args.command == "evidence-package":
         payload = build_evidence_package(
             args.workspace, args.destination, campaign_id=args.campaign_id, overwrite=args.overwrite
