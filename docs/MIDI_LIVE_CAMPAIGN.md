@@ -142,6 +142,22 @@ For private local reviewer work, add `--actions-jsonl imported/actions.jsonl`
 to enrich the report with aggregate tag-name clusters. Do not publish raw action
 ledgers, answer values, source paths, or candidate DICOM outputs.
 
+After the aggregate review, adjudicate the disagreement families before using
+the results in manuscripts or public performance claims:
+
+```bash
+dicom-privacy-campaign adjudicate-disagreements \
+  workspaces/midi-live/reports/orthanc-disagreement-review.json \
+  workspaces/midi-live/reports/orthanc-disagreement-adjudication.json \
+  --report-markdown workspaces/midi-live/reports/ORTHANC_DISAGREEMENT_ADJUDICATION.md
+```
+
+The adjudication report classifies date/UID presence-policy, text-tokenization,
+tag-null, and pixel-comparison disagreements. Treat the official-compatible
+validator score as the primary MIDI-B benchmark score and the internal strict
+score as a sensitivity analysis unless sampled reviewer signoff supports a
+stronger semantic interpretation.
+
 For smaller JSON-only experiments, the legacy in-memory comparator is still available:
 
 ```bash

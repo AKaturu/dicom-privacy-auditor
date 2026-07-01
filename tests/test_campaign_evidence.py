@@ -5,7 +5,10 @@ import sqlite3
 
 import pytest
 
-from dicom_privacy_auditor.campaign.disagreements import analyze_parity_disagreements
+from dicom_privacy_auditor.campaign.disagreements import (
+    adjudicate_parity_disagreements,
+    analyze_parity_disagreements,
+)
 from dicom_privacy_auditor.campaign.evidence import (
     archive_evidence_package,
     build_evidence_package,
@@ -203,6 +206,103 @@ def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
     assert len(result["sample_disagreements"]) == 2
     assert (tmp_path / "review.md").read_text(encoding="utf-8").startswith(
         "# MIDI-B Parity Disagreement Review"
+    )
+
+
+def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
+    source = tmp_path / "disagreement.json"
+    source.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "disagreement_count": 12,
+                "confusion": {
+                    "fail|fail": 4,
+                    "fail|pass": 7,
+                    "pass|fail": 2,
+                    "pass|pass": 8,
+                    "unresolved|pass": 1,
+                },
+                "top_action_status_disagreements": [
+                    {
+                        "action": "date shifted",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 4,
+                    },
+                    {
+                        "action": "text retained",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                    {
+                        "action": "tag retained",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 2,
+                    },
+                    {
+                        "action": "pixels retained",
+                        "internal_status": "unresolved",
+                        "official_status": "pass",
+                        "count": 2,
+                    },
+                    {
+                        "action": "unknown",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
+                ],
+                "top_category_status_disagreements": [
+                    {
+                        "category": "uid",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 4,
+                    },
+                    {
+                        "category": "dicom_standard",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 2,
+                    },
+                    {
+                        "category": "patient_name",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                    {
+                        "category": "<blank>",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = adjudicate_parity_disagreements(
+        source,
+        tmp_path / "adjudication.json",
+        report_markdown=tmp_path / "ADJUDICATION.md",
+    )
+
+    assert result["summary"]["action_cluster_rows"] == 12
+    assert result["summary"]["action_cluster_coverage"] == 1
+    assert result["confusion_summary"]["official_pass"] == 16
+    assert result["confusion_summary"]["official_score"] == 16 / 22
+    dispositions = {row["disposition"] for row in result["action_adjudications"]}
+    assert "internal_strict_false_negative_relative_to_official" in dispositions
+    assert "presence_or_null_representation_mismatch" in dispositions
+    assert "manual_review_required" in dispositions
+    assert result["category_adjudications"][0]["family"] == "uid_presence_mapping_policy"
+    assert (tmp_path / "ADJUDICATION.md").read_text(encoding="utf-8").startswith(
+        "# MIDI-B Disagreement Category Adjudication"
     )
 
 

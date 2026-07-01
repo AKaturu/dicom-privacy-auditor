@@ -121,6 +121,330 @@ def _render_markdown(payload: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _rule(
+    *,
+    family: str,
+    disposition: str,
+    confidence: str,
+    basis: str,
+    next_step: str,
+    publication_treatment: str,
+) -> dict[str, str]:
+    return {
+        "family": family,
+        "disposition": disposition,
+        "confidence": confidence,
+        "basis": basis,
+        "next_step": next_step,
+        "publication_treatment": publication_treatment,
+    }
+
+
+def _adjudicate_action_cluster(action: str, internal_status: str, official_status: str) -> dict[str, str]:
+    key = (action, internal_status, official_status)
+    if key in {
+        ("date shifted", "fail", "pass"),
+        ("uid changed", "fail", "pass"),
+        ("uid consistent", "fail", "pass"),
+    }:
+        return _rule(
+            family="date_uid_presence_mapping_policy",
+            disposition="internal_strict_false_negative_relative_to_official",
+            confidence="high",
+            basis=(
+                "The official-compatible validator treats removal of the original value, including a "
+                "missing candidate tag, as passing for changed-value checks; the internal comparator "
+                "requires a present non-empty replacement or exact UID mapping."
+            ),
+            next_step="Add or use an official-compatible evaluator profile; keep strict replacement checks as sensitivity analysis.",
+            publication_treatment="Use the official-compatible status for MIDI-B benchmark scoring.",
+        )
+    if key == ("pixels retained", "unresolved", "pass"):
+        return _rule(
+            family="pixel_comparison_capability",
+            disposition="internal_unresolved_relative_to_official_digest_pass",
+            confidence="high",
+            basis=(
+                "The internal comparator could not decode or compare pixel arrays, while the "
+                "official-compatible result passed its retained-pixel check."
+            ),
+            next_step="Report as official pass and track the internal pixel decode limitation separately.",
+            publication_treatment="Do not count this as a de-identification failure; disclose the internal unresolved count.",
+        )
+    if key == ("pixels hidden", "fail", "pass"):
+        return _rule(
+            family="pixel_semantic_ocr_policy",
+            disposition="official_ocr_pass_internal_pixel_delta_fail",
+            confidence="medium",
+            basis=(
+                "The official-compatible validator uses OCR/removal semantics for hidden text, while "
+                "the internal comparator requires changed pixels in the bounding region."
+            ),
+            next_step="Manually spot-review the five hidden-pixel cases before making semantic image-redaction claims.",
+            publication_treatment="Use official status for benchmark scoring; flag as manual-review priority.",
+        )
+    if action in {"text retained", "text removed"}:
+        if internal_status == "fail" and official_status == "pass":
+            return _rule(
+                family="text_tokenization_policy",
+                disposition="likely_internal_literal_false_negative_relative_to_official",
+                confidence="medium_high",
+                basis=(
+                    "The official-compatible validator lowercases, strips wrapper characters, and "
+                    "falls back to token-level checks; the internal comparator uses stricter literal "
+                    "substring matching."
+                ),
+                next_step="Use sampled tag-level review to confirm the largest text clusters and align an official-compatible profile.",
+                publication_treatment="Report official-compatible scoring; describe internal literal checks as conservative sensitivity.",
+            )
+        return _rule(
+            family="text_tokenization_policy",
+            disposition="sample_review_required",
+            confidence="medium",
+            basis=(
+                "The two comparators disagree under different text matching policies, and the "
+                "aggregate report intentionally omits raw values needed for final semantic review."
+            ),
+            next_step="Sample raw candidate/answer pairs under governed local access before claiming true semantic pass/fail.",
+            publication_treatment="Do not use this cluster for strong semantic performance claims without sampled review.",
+        )
+    if action in {"tag retained", "text notnull"}:
+        return _rule(
+            family="tag_presence_null_policy",
+            disposition="presence_or_null_representation_mismatch",
+            confidence="medium",
+            basis=(
+                "The official-compatible validator evaluates tabular indexed values and null markers; "
+                "the internal comparator evaluates pydicom element presence and stripped string content."
+            ),
+            next_step="Run tag-level sampled review for empty, null-marker, and absent-element cases.",
+            publication_treatment="Treat as comparator-policy mismatch until sampled review confirms true candidate defects.",
+        )
+    return _rule(
+        family="unclassified",
+        disposition="manual_review_required",
+        confidence="low",
+        basis="No specific adjudication rule matched this action/status combination.",
+        next_step="Inspect a governed sample and update the adjudication rubric.",
+        publication_treatment="Exclude from strong claims until reviewed.",
+    )
+
+
+def _adjudicate_category_cluster(category: str, internal_status: str, official_status: str) -> dict[str, str]:
+    if category in {"uid", "class_uid"} and internal_status == "fail" and official_status == "pass":
+        return _rule(
+            family="uid_presence_mapping_policy",
+            disposition="internal_strict_false_negative_relative_to_official",
+            confidence="high",
+            basis="UID-family rows follow the changed/consistent UID policy mismatch identified at action level.",
+            next_step="Use official-compatible UID semantics for MIDI-B scoring and strict UID replacement as sensitivity.",
+            publication_treatment="Report as official-compatible pass cluster, not a confirmed candidate failure.",
+        )
+    if category.startswith("date") and internal_status == "fail" and official_status == "pass":
+        return _rule(
+            family="date_presence_policy",
+            disposition="internal_strict_false_negative_relative_to_official",
+            confidence="high",
+            basis="Date-family rows follow the official policy where absent original dates pass changed-date checks.",
+            next_step="Use official-compatible date-shift semantics for MIDI-B scoring.",
+            publication_treatment="Report as official-compatible pass cluster, not a confirmed candidate failure.",
+        )
+    if category == "<blank>":
+        return _rule(
+            family="mixed_or_missing_answer_category",
+            disposition="adjudicate_by_action_family",
+            confidence="medium",
+            basis=(
+                "The normalized answer row did not carry a specific category in the aggregate report; "
+                "the action-level adjudication is more informative for this bucket."
+            ),
+            next_step="Use action/status adjudications and optional tag-name enrichment for final reviewer tables.",
+            publication_treatment="Do not present blank-category counts as a standalone semantic error family.",
+        )
+    if category in {"dicom_standard", "lut"}:
+        return _rule(
+            family="dicom_standard_presence_policy",
+            disposition="presence_or_null_representation_mismatch",
+            confidence="medium",
+            basis="These rows are dominated by tag-retained/text-not-null presence semantics rather than raw PHI leakage.",
+            next_step="Sample empty/null-marker and absent-element cases before semantic defect claims.",
+            publication_treatment="Report as comparator-policy mismatch pending sampled review.",
+        )
+    if category in {"person_name", "patient_name", "description", "patient_address;comment"}:
+        return _rule(
+            family="text_phi_tokenization_policy",
+            disposition="text_matching_policy_mismatch",
+            confidence="medium",
+            basis="These rows are text-bearing PHI categories where literal and tokenized checks can diverge.",
+            next_step="Prioritize governed sampled review because these categories are most relevant to semantic PHI claims.",
+            publication_treatment="Avoid strong semantic claims without sampled reviewer signoff.",
+        )
+    return _rule(
+        family="unclassified",
+        disposition="manual_review_required",
+        confidence="low",
+        basis="No specific category rule matched this category/status combination.",
+        next_step="Inspect a governed sample and update the adjudication rubric.",
+        publication_treatment="Exclude from strong claims until reviewed.",
+    )
+
+
+def _confusion_summary(confusion: dict[str, int]) -> dict[str, Any]:
+    total = sum(confusion.values())
+    official_pass = sum(count for key, count in confusion.items() if key.split("|")[-1] == "pass")
+    official_fail = sum(count for key, count in confusion.items() if key.split("|")[-1] == "fail")
+    internal_pass = sum(count for key, count in confusion.items() if key.split("|")[0] == "pass")
+    internal_fail = sum(count for key, count in confusion.items() if key.split("|")[0] == "fail")
+    return {
+        "total": total,
+        "official_pass": official_pass,
+        "official_fail": official_fail,
+        "official_score": official_pass / total if total else None,
+        "internal_pass": internal_pass,
+        "internal_fail": internal_fail,
+        "internal_score_from_confusion": internal_pass / total if total else None,
+    }
+
+
+def _render_adjudication_markdown(payload: dict[str, Any]) -> str:
+    def table(title: str, rows: list[dict[str, Any]], fields: list[str]) -> str:
+        if not rows:
+            return f"## {title}\n\nNo rows.\n"
+        header = "| " + " | ".join(fields) + " |"
+        divider = "| " + " | ".join("---" for _ in fields) + " |"
+        body = ["| " + " | ".join(str(row.get(field, "")) for field in fields) + " |" for row in rows]
+        return f"## {title}\n\n" + "\n".join([header, divider, *body]) + "\n"
+
+    summary = payload["summary"]
+    confusion = payload["confusion_summary"]
+    lines = [
+        "# MIDI-B Disagreement Category Adjudication",
+        "",
+        f"Generated: {payload['created_at']}",
+        "",
+        "## Scope",
+        "",
+        "This is an aggregate, reviewer-safe adjudication of disagreement families. It uses the prior "
+        "disagreement report plus source-code review of the official-compatible validator and does not "
+        "include raw answer values, patient identifiers, source paths, or pixel data.",
+        "",
+        "## Outcome",
+        "",
+        f"- Total disagreement rows: {summary['total_disagreements']}",
+        f"- Action-cluster rows adjudicated in this report: {summary['action_cluster_rows']}",
+        f"- Action-cluster coverage: {summary['action_cluster_coverage']}",
+        f"- Official-compatible score from confusion matrix: {confusion['official_score']}",
+        f"- Internal strict score from confusion matrix: {confusion['internal_score_from_confusion']}",
+        "",
+        "Publication treatment: report the official-compatible MIDI-B score with the confusion matrix. "
+        "Use the internal strict score as a sensitivity analysis, not as the primary official-validator "
+        "performance claim. Medium- and low-confidence clusters still need governed sampled review before "
+        "strong semantic PHI-retention claims.",
+        "",
+        table(
+            "Action Cluster Adjudication",
+            payload["action_adjudications"],
+            ["action", "internal_status", "official_status", "count", "family", "disposition", "confidence"],
+        ),
+        table(
+            "Category Cluster Adjudication",
+            payload["category_adjudications"],
+            ["category", "internal_status", "official_status", "count", "family", "disposition", "confidence"],
+        ),
+        table(
+            "Disposition Summary",
+            payload["disposition_summary"],
+            ["disposition", "count"],
+        ),
+        "## Reviewer Priorities",
+        "",
+        "1. Add an official-compatible evaluator profile for date/UID/tag/text/pixel semantics.",
+        "2. Sample text-bearing PHI clusters before making semantic PHI-retention claims.",
+        "3. Sample null-marker and absent-element cases for tag presence/null disagreements.",
+        "4. Manually inspect the five hidden-pixel disagreements because they are small and clinically visible.",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def adjudicate_parity_disagreements(
+    disagreement_json: str | Path,
+    output_json: str | Path,
+    *,
+    report_markdown: str | Path | None = None,
+) -> dict[str, Any]:
+    """Adjudicate aggregate MIDI parity disagreement clusters without exposing raw values."""
+    source = Path(disagreement_json)
+    destination = Path(output_json)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    report_path = Path(report_markdown) if report_markdown else None
+    if report_path:
+        report_path.parent.mkdir(parents=True, exist_ok=True)
+
+    source_payload = json.loads(source.read_text(encoding="utf-8"))
+    total_disagreements = int(source_payload.get("disagreement_count", 0))
+    action_adjudications: list[dict[str, Any]] = []
+    category_adjudications: list[dict[str, Any]] = []
+    disposition_counter: Counter[tuple[str, ...]] = Counter()
+    confidence_counter: Counter[tuple[str, ...]] = Counter()
+    action_cluster_rows = 0
+    category_cluster_rows = 0
+
+    for row in source_payload.get("top_action_status_disagreements", []):
+        count = int(row.get("count", 0))
+        rule = _adjudicate_action_cluster(
+            _label(row.get("action")),
+            _label(row.get("internal_status")),
+            _label(row.get("official_status")),
+        )
+        action_cluster_rows += count
+        disposition_counter[(rule["disposition"],)] += count
+        confidence_counter[(rule["confidence"],)] += count
+        action_adjudications.append({**row, **rule})
+
+    for row in source_payload.get("top_category_status_disagreements", []):
+        count = int(row.get("count", 0))
+        rule = _adjudicate_category_cluster(
+            _label(row.get("category")),
+            _label(row.get("internal_status")),
+            _label(row.get("official_status")),
+        )
+        category_cluster_rows += count
+        category_adjudications.append({**row, **rule})
+
+    payload: dict[str, Any] = {
+        "schema_version": "1.0",
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "source_disagreement_json_sha256": _sha256(source),
+        "source_disagreement_schema_version": source_payload.get("schema_version"),
+        "summary": {
+            "total_disagreements": total_disagreements,
+            "action_cluster_count": len(action_adjudications),
+            "action_cluster_rows": action_cluster_rows,
+            "action_cluster_coverage": action_cluster_rows / total_disagreements if total_disagreements else None,
+            "category_cluster_count": len(category_adjudications),
+            "category_cluster_rows": category_cluster_rows,
+            "category_cluster_coverage": category_cluster_rows / total_disagreements if total_disagreements else None,
+        },
+        "confusion_summary": _confusion_summary(source_payload.get("confusion", {})),
+        "disposition_summary": _top(disposition_counter, ("disposition",), limit=50),
+        "confidence_summary": _top(confidence_counter, ("confidence",), limit=10),
+        "action_adjudications": action_adjudications,
+        "category_adjudications": category_adjudications,
+        "publication_position": {
+            "primary_score": "official_compatible_validator_score",
+            "sensitivity_score": "internal_strict_evaluator_score",
+            "strong_semantic_claims": "defer_until_medium_low_confidence_clusters_have_sampled_reviewer_signoff",
+        },
+    }
+    atomic_write_text(destination, json.dumps(payload, indent=2, sort_keys=True) + "\n")
+    restrict_file(destination)
+    if report_path:
+        atomic_write_text(report_path, _render_adjudication_markdown(payload))
+        restrict_file(report_path)
+    return payload
+
+
 def analyze_parity_disagreements(
     internal_file: str | Path,
     official_file: str | Path,

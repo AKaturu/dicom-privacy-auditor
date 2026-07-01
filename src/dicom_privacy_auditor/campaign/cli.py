@@ -4,7 +4,7 @@ import argparse
 import json
 from pathlib import Path
 
-from .disagreements import analyze_parity_disagreements
+from .disagreements import adjudicate_parity_disagreements, analyze_parity_disagreements
 from .evidence import (
     MAX_EVIDENCE_ARCHIVE_MEMBERS,
     MAX_EVIDENCE_UNCOMPRESSED_BYTES,
@@ -105,6 +105,13 @@ def build_parser() -> argparse.ArgumentParser:
     review.add_argument("--actions-jsonl", type=Path)
     review.add_argument("--top-n", type=int, default=25)
     review.add_argument("--sample-limit", type=int, default=0)
+    adjudicate = sub.add_parser(
+        "adjudicate-disagreements",
+        help="Adjudicate aggregate disagreement categories for publication-safe interpretation",
+    )
+    adjudicate.add_argument("disagreement_json", type=Path)
+    adjudicate.add_argument("output", type=Path)
+    adjudicate.add_argument("--report-markdown", type=Path)
     evidence = sub.add_parser(
         "evidence-package", help="Build a redacted, checksummed campaign evidence package"
     )
@@ -188,6 +195,14 @@ def main(argv: list[str] | None = None) -> int:
             actions_jsonl=args.actions_jsonl,
             top_n=args.top_n,
             sample_limit=args.sample_limit,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
+    if args.command == "adjudicate-disagreements":
+        payload = adjudicate_parity_disagreements(
+            args.disagreement_json,
+            args.output,
+            report_markdown=args.report_markdown,
         )
         print(json.dumps(payload, indent=2))
         return 0
