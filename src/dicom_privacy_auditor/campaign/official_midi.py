@@ -2,9 +2,11 @@ from __future__ import annotations
 
 import csv
 import hashlib
+import json
 import os
 import sqlite3
 import tempfile
+from collections import OrderedDict
 from pathlib import Path
 from typing import Any
 
@@ -37,10 +39,47 @@ def _load_uid_new_to_old(path: Path) -> dict[str, str]:
     return mapping
 
 
-def _load_answer_rowids(path: Path) -> dict[str, str]:
-    with sqlite3.connect(path) as connection:
-        rows = connection.execute("SELECT rowid, SOPInstanceUID FROM answer_data")
-        return {str(sop_uid): str(rowid) for rowid, sop_uid in rows if sop_uid not in (None, "")}
+class _AnswerPayloadLookup:
+    def __init__(self, path: Path, *, cache_size: int = 2048) -> None:
+        self.connection = sqlite3.connect(path)
+        self.cache_size = cache_size
+        self.cache: OrderedDict[str, tuple[str, dict[str, Any]]] = OrderedDict()
+
+    def close(self) -> None:
+        self.connection.close()
+
+    def _load_payload(self, sop_instance_uid: str) -> tuple[str, dict[str, Any]] | None:
+        cached = self.cache.get(sop_instance_uid)
+        if cached is not None:
+            self.cache.move_to_end(sop_instance_uid)
+            return cached
+        row = self.connection.execute(
+            "SELECT rowid, AnswerData FROM answer_data WHERE SOPInstanceUID = ?",
+            (sop_instance_uid,),
+        ).fetchone()
+        if row is None:
+            return None
+        rowid, payload_text = row
+        payload = json.loads(payload_text)
+        if isinstance(payload, list):
+            payload = {str(index): item for index, item in enumerate(payload)}
+        if not isinstance(payload, dict):
+            return None
+        loaded = (str(rowid), payload)
+        self.cache[sop_instance_uid] = loaded
+        if len(self.cache) > self.cache_size:
+            self.cache.popitem(last=False)
+        return loaded
+
+    def get(self, sop_instance_uid: str, payload_key: str) -> tuple[str, dict[str, Any]] | None:
+        loaded = self._load_payload(sop_instance_uid)
+        if loaded is None:
+            return None
+        rowid, payload = loaded
+        entry = payload.get(payload_key)
+        if not isinstance(entry, dict):
+            return None
+        return rowid, entry
 
 
 def _status_from_check_passed(value: Any) -> str:
@@ -59,7 +98,7 @@ def _official_rows(path: Path) -> tuple[list[str], sqlite3.Connection]:
     connection.row_factory = sqlite3.Row
     try:
         columns = [row[1] for row in connection.execute("PRAGMA table_info(validation_results)")]
-        required = {"check_index", "check_passed", "action", "answer_value", "instance"}
+        required = {"check_index", "check_passed", "action", "instance"}
         missing = sorted(required - set(columns))
         if missing:
             raise ValueError(f"official validation_results table is missing columns: {', '.join(missing)}")
@@ -110,7 +149,7 @@ def normalize_official_midi_results(
         unmatched_destination.parent.mkdir(parents=True, exist_ok=True)
 
     uid_new_to_old = _load_uid_new_to_old(uid_mapping_path)
-    answer_rowids = _load_answer_rowids(answer_path)
+    answer_lookup = _AnswerPayloadLookup(answer_path)
     _, connection = _official_rows(official_path)
 
     descriptor, temporary_name = tempfile.mkstemp(prefix=f".{destination.name}.", dir=destination.parent)
@@ -153,10 +192,10 @@ def normalize_official_midi_results(
                 total_rows += 1
                 candidate_instance = _clean_uid(row["instance"])
                 old_sop = uid_new_to_old.get(candidate_instance, candidate_instance)
-                answer_rowid = answer_rowids.get(old_sop)
                 payload_key = str(row["check_index"]).strip()
+                payload_match = answer_lookup.get(old_sop, payload_key)
                 action = _normalized_action(row["action"])
-                if not answer_rowid or not payload_key or action not in MIDI_ACTIONS:
+                if not payload_match or not payload_key:
                     unmatched_rows += 1
                     if unmatched_writer:
                         unmatched_writer.writerow(
@@ -166,15 +205,31 @@ def normalize_official_midi_results(
                                 "old_sop_instance_uid": old_sop,
                                 "check_index": payload_key,
                                 "action": action,
-                                "reason": "missing_answer_row_or_unrecognized_action",
+                                "reason": "missing_answer_payload",
+                            }
+                        )
+                    continue
+                answer_rowid, answer_entry = payload_match
+                action = _normalized_action(answer_entry.get("action"))
+                if action not in MIDI_ACTIONS:
+                    unmatched_rows += 1
+                    if unmatched_writer:
+                        unmatched_writer.writerow(
+                            {
+                                "official_rowid": row["__official_rowid__"],
+                                "instance": candidate_instance,
+                                "old_sop_instance_uid": old_sop,
+                                "check_index": payload_key,
+                                "action": action,
+                                "reason": "unrecognized_action",
                             }
                         )
                     continue
                 tag = _parse_tag(
-                    row["tag"] if "tag" in row.keys() else None,
-                    _unwrap_answer_value(row["tag_name"]) if "tag_name" in row.keys() else None,
+                    answer_entry.get("tag") or answer_entry.get("tag_ds"),
+                    _unwrap_answer_value(answer_entry.get("tag_name")),
                 )
-                value = _unwrap_answer_value(row["answer_value"])
+                value = _unwrap_answer_value(answer_entry.get("value"))
                 status = _status_from_check_passed(row["check_passed"])
                 writer.writerow(
                     {
@@ -223,6 +278,7 @@ def normalize_official_midi_results(
             "status_counts": dict(sorted(status_counts.items())),
         }
     finally:
+        answer_lookup.close()
         connection.close()
         if unmatched_handle:
             unmatched_handle.close()

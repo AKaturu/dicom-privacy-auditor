@@ -93,10 +93,23 @@ def test_streaming_parity_rejects_duplicate_action_ids(tmp_path):
 def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
     answer_db = tmp_path / "answer.db"
     with sqlite3.connect(answer_db) as connection:
-        connection.execute("CREATE TABLE answer_data (SOPInstanceUID TEXT)")
+        connection.execute("CREATE TABLE answer_data (SOPInstanceUID TEXT, AnswerData TEXT)")
         connection.execute(
-            "INSERT INTO answer_data (SOPInstanceUID) VALUES (?)",
-            ("1.2.840.old",),
+            "INSERT INTO answer_data (SOPInstanceUID, AnswerData) VALUES (?, ?)",
+            (
+                "1.2.840.old",
+                json.dumps(
+                    {
+                        "0": {
+                            "tag": "<(0008,0005)>",
+                            "tag_ds": "<(0008,0005)>",
+                            "tag_name": "<Specific Character Set>",
+                            "value": "<ISO_IR 100>",
+                            "action": "<text_retained>",
+                        }
+                    }
+                ),
+            ),
         )
 
     official_db = tmp_path / "official.db"
@@ -120,7 +133,7 @@ def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
             (check_index, check_passed, action, answer_value, instance, tag, tag_name)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
-            (0, 1, "<text_retained>", "<ISO_IR 100>", "1.2.840.new", "<(0008,0005)>", "Specific Character Set"),
+            (0, 1, "<text_retained>", "<MUTATED>", "1.2.840.new", "<(0008,0005)>", "Specific Character Set"),
         )
 
     mapping = tmp_path / "uid_mapping.csv"
