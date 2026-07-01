@@ -8,6 +8,7 @@ from dicom_privacy_auditor.campaign.evidence import (
     archive_evidence_package,
     build_evidence_package,
     compare_evaluators,
+    compare_evaluators_streaming,
     generate_review_sample,
     verify_evidence_package,
 )
@@ -43,6 +44,48 @@ def test_compare_evaluators_reports_discrepancies(tmp_path):
     result = compare_evaluators(left, right, tmp_path / "parity.json")
     assert result["discrepancy_count"] == 1
     assert result["exact_status_agreement"] == 0
+
+
+def test_streaming_parity_compares_csv_inputs_and_truncates_discrepancies(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text(
+        "action_id,action,status\n"
+        "a,uid changed,pass\n"
+        "b,text removed,fail\n"
+        "c,tag retained,unresolved\n",
+        encoding="utf-8",
+    )
+    right = tmp_path / "official.csv"
+    right.write_text(
+        "action_id,action,status\n"
+        "a,uid changed,True\n"
+        "b,text removed,pass\n"
+        "d,tag retained,False\n",
+        encoding="utf-8",
+    )
+
+    result = compare_evaluators_streaming(left, right, tmp_path / "parity.json", discrepancy_limit=2)
+
+    assert result["internal_row_count"] == 3
+    assert result["official_row_count"] == 3
+    assert result["union_action_count"] == 4
+    assert result["exact_status_matches"] == 1
+    assert result["discrepancy_count"] == 3
+    assert result["discrepancies_truncated"] is True
+    assert result["confusion"]["pass|pass"] == 1
+    assert result["confusion"]["fail|pass"] == 1
+    assert result["confusion"]["unresolved|missing"] == 1
+    assert result["confusion"]["missing|fail"] == 1
+
+
+def test_streaming_parity_rejects_duplicate_action_ids(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text("action_id,status\na,pass\na,fail\n", encoding="utf-8")
+    right = tmp_path / "official.csv"
+    right.write_text("action_id,status\na,pass\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate internal action_id"):
+        compare_evaluators_streaming(left, right, tmp_path / "parity.json")
 
 
 def test_evidence_package_redacts_paths_and_checksums(tmp_path):

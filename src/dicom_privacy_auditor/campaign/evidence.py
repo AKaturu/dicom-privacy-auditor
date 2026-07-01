@@ -1,12 +1,16 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
 import random
 import shutil
+import sqlite3
 import tarfile
+import tempfile
 from collections import Counter, defaultdict
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -174,6 +178,171 @@ def compare_evaluators(
     atomic_write_text(destination, json.dumps(result, indent=2, sort_keys=True) + "\n")
     restrict_file(destination)
     return result
+
+
+def _canonical_status(value: Any) -> str:
+    status = str(value).strip().lower()
+    if status in {"pass", "passed", "success", "succeeded", "true", "1", "yes"}:
+        return "pass"
+    if status in {"fail", "failed", "failure", "false", "0", "no"}:
+        return "fail"
+    if status in {"unresolved", "unknown", "missing", "error"}:
+        return status
+    return status
+
+
+def _iter_result_rows(path: Path) -> Iterator[dict[str, str]]:
+    if path.suffix.lower() == ".csv":
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            if not reader.fieldnames or "action_id" not in reader.fieldnames or "status" not in reader.fieldnames:
+                raise ValueError("CSV evaluation input must contain action_id and status columns")
+            for row in reader:
+                action_id = str(row.get("action_id", "")).strip()
+                if not action_id:
+                    raise ValueError("every evaluation result requires action_id")
+                yield {
+                    "action_id": action_id,
+                    "action": str(row.get("action", "")).strip(),
+                    "status": _canonical_status(row.get("status", "")),
+                }
+        return
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("results")
+    if not isinstance(rows, list):
+        raise ValueError("evaluation JSON must contain a results array")
+    for row in rows:
+        action_id = str(row.get("action_id", "")).strip()
+        if not action_id:
+            raise ValueError("every evaluation result requires action_id")
+        yield {
+            "action_id": action_id,
+            "action": str(row.get("action", "")).strip(),
+            "status": _canonical_status(row.get("status", "")),
+        }
+
+
+def compare_evaluators_streaming(
+    internal_file: str | Path,
+    official_file: str | Path,
+    output_file: str | Path,
+    *,
+    discrepancy_limit: int = 10_000,
+) -> dict[str, Any]:
+    """Compare large action-level CSV/JSON evaluator outputs with bounded memory."""
+    if discrepancy_limit < 0:
+        raise ValueError("discrepancy_limit must be non-negative")
+    internal_path, official_path = Path(internal_file), Path(official_file)
+    destination = Path(output_file)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_handle = tempfile.NamedTemporaryFile(
+        prefix=f"{destination.stem}.", suffix=".sqlite", dir=destination.parent, delete=False
+    )
+    temp_path = Path(temp_handle.name)
+    temp_handle.close()
+    discrepancies: list[dict[str, Any]] = []
+    discrepancy_count = 0
+    confusion: Counter[str] = Counter()
+    internal_count = 0
+    official_count = 0
+    matched = 0
+    db: sqlite3.Connection | None = None
+
+    try:
+        with sqlite3.connect(temp_path) as db:
+            db.execute(
+                "CREATE TABLE official (action_id TEXT PRIMARY KEY, action TEXT, status TEXT NOT NULL, seen INTEGER NOT NULL DEFAULT 0)"
+            )
+            db.execute("CREATE TABLE internal_seen (action_id TEXT PRIMARY KEY)")
+            for row in _iter_result_rows(official_path):
+                official_count += 1
+                try:
+                    db.execute(
+                        "INSERT INTO official (action_id, action, status) VALUES (?, ?, ?)",
+                        (row["action_id"], row["action"], row["status"]),
+                    )
+                except sqlite3.IntegrityError as exc:
+                    raise ValueError(f"duplicate official action_id: {row['action_id']}") from exc
+            db.commit()
+
+            for row in _iter_result_rows(internal_path):
+                internal_count += 1
+                try:
+                    db.execute("INSERT INTO internal_seen (action_id) VALUES (?)", (row["action_id"],))
+                except sqlite3.IntegrityError as exc:
+                    raise ValueError(f"duplicate internal action_id: {row['action_id']}") from exc
+                official_row = db.execute(
+                    "SELECT action, status FROM official WHERE action_id = ?", (row["action_id"],)
+                ).fetchone()
+                if official_row is None:
+                    rstatus = "missing"
+                    action = row["action"]
+                else:
+                    action = row["action"] or official_row[0] or ""
+                    rstatus = str(official_row[1])
+                    db.execute("UPDATE official SET seen = 1 WHERE action_id = ?", (row["action_id"],))
+                lstatus = row["status"]
+                confusion[f"{lstatus}|{rstatus}"] += 1
+                if lstatus == rstatus:
+                    matched += 1
+                else:
+                    discrepancy_count += 1
+                    if len(discrepancies) < discrepancy_limit:
+                        discrepancies.append(
+                            {
+                                "action_id": row["action_id"],
+                                "action": action,
+                                "internal_status": lstatus,
+                                "official_status": rstatus,
+                            }
+                        )
+            db.commit()
+
+            missing_internal = db.execute(
+                "SELECT action_id, action, status FROM official WHERE seen = 0 ORDER BY action_id"
+            )
+            for action_id, action, status in missing_internal:
+                confusion[f"missing|{status}"] += 1
+                discrepancy_count += 1
+                if len(discrepancies) < discrepancy_limit:
+                    discrepancies.append(
+                        {
+                            "action_id": action_id,
+                            "action": action,
+                            "internal_status": "missing",
+                            "official_status": status,
+                        }
+                    )
+
+        union_count = matched + discrepancy_count
+        result = {
+            "schema_version": "1.0",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "internal_sha256": _sha256(internal_path),
+            "official_sha256": _sha256(official_path),
+            "internal_row_count": internal_count,
+            "official_row_count": official_count,
+            "union_action_count": union_count,
+            "exact_status_matches": matched,
+            "exact_status_agreement": matched / union_count if union_count else None,
+            "confusion": dict(sorted(confusion.items())),
+            "discrepancy_count": discrepancy_count,
+            "discrepancy_sample_limit": discrepancy_limit,
+            "discrepancies_truncated": discrepancy_count > len(discrepancies),
+            "discrepancies": discrepancies,
+        }
+        atomic_write_text(destination, json.dumps(result, indent=2, sort_keys=True) + "\n")
+        restrict_file(destination)
+        return result
+    finally:
+        if db is not None:
+            db.close()
+        try:
+            temp_path.unlink()
+        except FileNotFoundError:
+            pass
 
 
 def build_evidence_package(

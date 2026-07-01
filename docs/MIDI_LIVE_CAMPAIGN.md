@@ -117,6 +117,15 @@ dicom-privacy-campaign parity \
   workspaces/midi-live/reports/orthanc-parity.json
 ```
 
+For complete MIDI-B runs with millions of action rows, keep full action outputs in CSV form and use the bounded-memory comparator:
+
+```bash
+dicom-privacy-campaign parity-stream \
+  workspaces/midi-live/evaluations/orthanc/midi_results.csv \
+  workspaces/midi-live/official/orthanc-normalized.csv \
+  workspaces/midi-live/reports/orthanc-parity.json
+```
+
 Assemble a redacted evidence directory and checksum manifest:
 
 ```bash

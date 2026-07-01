@@ -10,6 +10,7 @@ from .evidence import (
     archive_evidence_package,
     build_evidence_package,
     compare_evaluators,
+    compare_evaluators_streaming,
     generate_review_sample,
     verify_evidence_package,
 )
@@ -75,6 +76,13 @@ def build_parser() -> argparse.ArgumentParser:
     parity.add_argument("internal", type=Path)
     parity.add_argument("official", type=Path)
     parity.add_argument("output", type=Path)
+    parity_stream = sub.add_parser(
+        "parity-stream", help="Compare large CSV/JSON evaluator outputs with bounded memory"
+    )
+    parity_stream.add_argument("internal", type=Path)
+    parity_stream.add_argument("official", type=Path)
+    parity_stream.add_argument("output", type=Path)
+    parity_stream.add_argument("--discrepancy-limit", type=int, default=10_000)
     evidence = sub.add_parser(
         "evidence-package", help="Build a redacted, checksummed campaign evidence package"
     )
@@ -128,6 +136,15 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "parity":
         payload = compare_evaluators(args.internal, args.official, args.output)
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["discrepancy_count"] == 0 else 2
+    if args.command == "parity-stream":
+        payload = compare_evaluators_streaming(
+            args.internal,
+            args.official,
+            args.output,
+            discrepancy_limit=args.discrepancy_limit,
+        )
         print(json.dumps(payload, indent=2))
         return 0 if payload["discrepancy_count"] == 0 else 2
     if args.command == "evidence-package":
