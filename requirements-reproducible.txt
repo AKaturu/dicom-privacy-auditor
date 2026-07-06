@@ -1,7 +1,7 @@
 # Direct versions used for the local 0.7.1 validation on 2026-06-20.
 # The fully hashed CPython 3.13/Linux x86-64 runtime lock remains canonical.
 numpy==2.4.6
-Pillow==12.2.0
+Pillow==12.3.0
 pydicom==3.0.2
 requests==2.34.2
 jsonschema==4.26.0
