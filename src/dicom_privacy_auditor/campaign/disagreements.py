@@ -40,7 +40,7 @@ def _iter_result_csv(path: Path, *, label: str) -> Iterator[dict[str, str]]:
 def _top(counter: Counter[tuple[str, ...]], fields: tuple[str, ...], *, limit: int) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     for key, count in counter.most_common(limit):
-        row = {field: value for field, value in zip(fields, key, strict=True)}
+        row: dict[str, Any] = {field: value for field, value in zip(fields, key, strict=True)}
         row["count"] = count
         rows.append(row)
     return rows

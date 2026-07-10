@@ -13,13 +13,14 @@ from collections import Counter, OrderedDict, defaultdict
 from collections.abc import Iterable, Iterator
 from contextlib import closing
 from dataclasses import asdict, dataclass, fields
+from functools import lru_cache
 from pathlib import Path, PureWindowsPath
 from typing import Any, cast
 
 import numpy as np
 import pydicom
 from pydicom.datadict import tag_for_keyword
-from pydicom.tag import Tag
+from pydicom.tag import BaseTag, Tag
 
 from ..jsonio import validate_payload, write_json
 from ..permissions import restrict_file
@@ -61,6 +62,48 @@ ALIASES: dict[str, tuple[str, ...]] = {
     "coordinates": ("coordinates", "bbox", "bounding_box", "pixel_coordinates"),
 }
 
+_CANONICAL_TAG_PATH_COMPONENT = re.compile(r"([0-9A-Fa-f]{8})(?:\[(\d+)\])?")
+_OFFICIAL_TAG_PATH_COMPONENT = re.compile(
+    r"\(([0-9A-Fa-f]{4}),\s*([0-9A-Fa-f]{4})\)(?:\[(\d+)\])?"
+)
+
+
+def _canonical_tag_path(value: Any) -> str | None:
+    """Normalize MIDI's case-sensitive tag path syntax into an internal form."""
+    if value in (None, ""):
+        return None
+    text = str(value).replace("<", "").replace(">", "").strip()
+    if not text:
+        return None
+    if "(" in text:
+        components = [
+            (f"{group}{element}".upper(), index)
+            for group, element, index in _OFFICIAL_TAG_PATH_COMPONENT.findall(text)
+        ]
+    else:
+        components = [
+            (match.group(1).upper(), match.group(2))
+            for part in text.split("/")
+            if (match := _CANONICAL_TAG_PATH_COMPONENT.fullmatch(part.strip()))
+        ]
+    if not components:
+        return None
+    return "/".join(f"{tag}[{int(index)}]" if index else tag for tag, index in components)
+
+
+@lru_cache(maxsize=8192)
+def _tag_path_segments(path: str) -> tuple[tuple[BaseTag, int | None], ...]:
+    canonical = _canonical_tag_path(path)
+    if not canonical:
+        return ()
+    segments: list[tuple[BaseTag, int | None]] = []
+    for component in canonical.split("/"):
+        match = _CANONICAL_TAG_PATH_COMPONENT.fullmatch(component)
+        if not match:
+            return ()
+        segments.append((Tag(int(match.group(1), 16)), int(match.group(2)) if match.group(2) else None))
+    return tuple(segments)
+
 
 @dataclass
 class MidiAction:
@@ -73,6 +116,8 @@ class MidiAction:
     tag_name: str | None
     value: str | None
     source_relative_path: str | None
+    scope: str | None = None
+    tag_path: str | None = None
     frame: int | None = None
     bbox_xyxy: tuple[int, int, int, int] | None = None
     raw_table: str | None = None
@@ -84,6 +129,11 @@ class MidiAction:
             raise ValueError(f"Unsupported MIDI action: {self.action}")
         if self.source_relative_path is not None:
             self.source_relative_path = _validated_relative_path(self.source_relative_path)
+        if self.tag_path is not None:
+            canonical_path = _canonical_tag_path(self.tag_path)
+            if not canonical_path:
+                raise ValueError(f"Invalid MIDI tag path: {self.tag_path}")
+            self.tag_path = canonical_path
         if self.frame is not None and self.frame < 0:
             raise ValueError("MIDI frame must be non-negative")
         if self.bbox_xyxy is not None:
@@ -650,6 +700,8 @@ def import_midi(
                                         tag_name=tag_name,
                                         value=value,
                                         source_relative_path=relative,
+                                        scope=_unwrap_answer_value(entry.get("scope")),
+                                        tag_path=_canonical_tag_path(entry.get("tag_ds") or entry.get("tag")),
                                         bbox_xyxy=(
                                             _parse_official_payload_bbox(entry)
                                             if action_name == "pixels hidden"
@@ -798,6 +850,24 @@ def read_actions(path: Path) -> list[MidiAction]:
     return list(iter_actions(path))
 
 
+def pixel_bboxes_by_source_path(
+    actions_path: str | Path,
+) -> dict[str, list[tuple[int, int, int, int]]]:
+    """Return reviewed MIDI hidden-pixel boxes grouped by source-relative path."""
+    output: dict[str, list[tuple[int, int, int, int]]] = defaultdict(list)
+    for action in iter_actions(Path(actions_path)):
+        if action.action != "pixels hidden" or action.bbox_xyxy is None:
+            continue
+        if action.frame is not None:
+            raise ValueError(
+                "Frame-specific MIDI pixel regions are not supported by the single-frame baseline"
+            )
+        if action.source_relative_path is None:
+            raise ValueError(f"Pixel action has no resolved source path: {action.action_id}")
+        output[action.source_relative_path].append(action.bbox_xyxy)
+    return dict(output)
+
+
 def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]]:
     by_uid: dict[str, Path] = {}
     by_patient: dict[str, list[Path]] = defaultdict(list)
@@ -855,20 +925,78 @@ class _MidiReadCache:
             return self._pixels[key]
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", UserWarning)
-            pixels = np.asarray(pydicom.dcmread(resolved).pixel_array)
-        if pixels.ndim > 2:
+            dataset = pydicom.dcmread(resolved)
+            pixels = np.asarray(dataset.pixel_array)
+        frame_count = int(getattr(dataset, "NumberOfFrames", 1) or 1)
+        if frame_count > 1 and frame is not None:
             index = max(0, (frame or 1) - 1)
             pixels = pixels[index]
         return self._remember(self._pixels, key, pixels)
 
 
-def _dataset_value(dataset, tag_hex: str | None):
-    if not tag_hex:
+def _value_at_tag_path(dataset: Any, path: str) -> tuple[Any, bool]:
+    segments = _tag_path_segments(path)
+    if not segments:
         return None, False
-    tag = Tag(int(tag_hex, 16))
-    if tag not in dataset:
-        return None, False
-    return dataset[tag].value, True
+    current = dataset
+    for position, (tag, item_index) in enumerate(segments):
+        if tag not in current:
+            return None, False
+        element = current[tag]
+        final = position == len(segments) - 1
+        if item_index is None:
+            return (element.value, True) if final else (None, False)
+        if final or element.VR != "SQ" or item_index >= len(element.value):
+            return None, False
+        current = element.value[item_index]
+    return None, False
+
+
+def _iter_nested_tag_values(
+    dataset: Any, target: BaseTag, prefix: tuple[str, ...] = ()
+) -> Iterator[tuple[str, Any]]:
+    for element in dataset:
+        component = f"{int(element.tag):08X}"
+        path = "/".join((*prefix, component))
+        if element.tag == target:
+            yield path, element.value
+        if element.VR == "SQ":
+            for index, item in enumerate(element.value):
+                yield from _iter_nested_tag_values(item, target, (*prefix, f"{component}[{index}]"))
+
+
+def _dataset_occurrences(dataset: Any, action: MidiAction) -> dict[str, Any]:
+    if action.tag_path:
+        value, present = _value_at_tag_path(dataset, action.tag_path)
+        return {action.tag_path: value} if present else {}
+    if not action.tag:
+        return {}
+    target = Tag(int(action.tag, 16))
+    if target in dataset:
+        return {f"{int(target):08X}": dataset[target].value}
+    return dict(_iter_nested_tag_values(dataset, target))
+
+
+def _text_values(occurrences: dict[str, Any]) -> list[str]:
+    return [str(value or "") for value in occurrences.values()]
+
+
+def _expected_needles(action: MidiAction, source_values: list[str]) -> list[str]:
+    if action.value not in (None, ""):
+        return [str(action.value)]
+    return [value for value in source_values if value]
+
+
+def _all_occurrences_changed(source: dict[str, Any], candidate: dict[str, Any]) -> bool:
+    if not source:
+        return False
+    for path, source_value in source.items():
+        if path not in candidate:
+            return False
+        candidate_text = str(candidate[path] or "")
+        if not candidate_text or str(source_value or "") == candidate_text:
+            return False
+    return True
 
 
 def _pixel_arrays(
@@ -881,9 +1009,12 @@ def _pixel_arrays(
         source = read_cache.pixels(source_path, frame)
         candidate = read_cache.pixels(candidate_path, frame)
     else:
-        source = np.asarray(pydicom.dcmread(source_path).pixel_array)
-        candidate = np.asarray(pydicom.dcmread(candidate_path).pixel_array)
-        if source.ndim > 2:
+        source_dataset = pydicom.dcmread(source_path)
+        candidate_dataset = pydicom.dcmread(candidate_path)
+        source = np.asarray(source_dataset.pixel_array)
+        candidate = np.asarray(candidate_dataset.pixel_array)
+        frame_count = int(getattr(source_dataset, "NumberOfFrames", 1) or 1)
+        if frame_count > 1 and frame is not None:
             index = max(0, (frame or 1) - 1)
             source = source[index]
             candidate = candidate[index]
@@ -922,15 +1053,16 @@ def _evaluate_action(
         return MidiActionResult(
             status="error", reason=f"DICOM read failed: {type(exc).__name__}: {exc}", **common
         )
-    source_value, source_has = _dataset_value(source, action.tag)
-    candidate_value, candidate_has = _dataset_value(candidate, action.tag)
-    source_text = str(source_value or "")
-    candidate_text = str(candidate_value or "")
+    source_occurrences = _dataset_occurrences(source, action)
+    candidate_occurrences = _dataset_occurrences(candidate, action)
+    candidate_has = bool(candidate_occurrences)
+    source_values = _text_values(source_occurrences)
+    candidate_values = _text_values(candidate_occurrences)
 
     passed = False
     reason = ""
     if action.action == "date shifted":
-        passed = source_has and candidate_has and bool(candidate_text) and source_text != candidate_text
+        passed = _all_occurrences_changed(source_occurrences, candidate_occurrences)
         reason = "date changed" if passed else "date was absent, empty, or unchanged"
     elif action.action == "patid consistent":
         old = action.patient_id or str(getattr(source, "PatientID", ""))
@@ -944,23 +1076,32 @@ def _evaluate_action(
         passed = candidate_has
         reason = "tag retained" if passed else "required tag is absent"
     elif action.action == "text notnull":
-        passed = candidate_has and bool(candidate_text.strip())
+        passed = candidate_has and all(value.strip() for value in candidate_values)
         reason = "tag contains a value" if passed else "tag is absent or zero length"
     elif action.action == "text removed":
-        needle = action.value or source_text
-        passed = not needle or needle not in candidate_text
+        needles = _expected_needles(action, source_values)
+        passed = not needles or all(
+            needle not in candidate_value
+            for needle in needles
+            for candidate_value in candidate_values
+        )
         reason = "specified text removed" if passed else "specified text remains"
     elif action.action == "text retained":
-        needle = action.value or source_text
-        passed = candidate_has and needle in candidate_text
+        needles = _expected_needles(action, source_values)
+        passed = candidate_has and (
+            not needles
+            or all(any(needle in candidate_value for candidate_value in candidate_values) for needle in needles)
+        )
         reason = "specified text retained" if passed else "specified text is missing"
     elif action.action == "uid changed":
-        passed = source_has and candidate_has and bool(candidate_text) and source_text != candidate_text
+        passed = _all_occurrences_changed(source_occurrences, candidate_occurrences)
         reason = "UID changed" if passed else "UID was absent, empty, or unchanged"
     elif action.action == "uid consistent":
-        old = action.value or source_text or action.sop_instance_uid or ""
-        expected = uid_map.get(old)
-        passed = bool(expected) and candidate_text == expected
+        old_values = _expected_needles(action, source_values) or [action.sop_instance_uid or ""]
+        expected_uids = [uid_map.get(old) for old in old_values]
+        passed = bool(expected_uids) and all(
+            mapped and mapped in candidate_values for mapped in expected_uids
+        )
         reason = "UID mapping matched" if passed else "candidate UID did not match the supplied mapping"
     elif action.action in {"pixels hidden", "pixels retained"}:
         try:

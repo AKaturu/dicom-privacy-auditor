@@ -330,7 +330,7 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
     checks = [replace(item, required=item.name not in optional) for item in checks]
     payload = [asdict(item) for item in checks]
     required_checks = [item for item in checks if item.required]
-    result = {
+    result: dict[str, Any] = {
         "schema_version": "1.0",
         "status": "ready" if all(item.status == "ready" for item in required_checks) else "blocked",
         "checks": payload,

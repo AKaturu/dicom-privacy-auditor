@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- Canonicalized MIDI-B nested `tag_ds` paths and evaluated the exact sequence occurrence named by the
+  answer key instead of relying on a top-level terminal-tag lookup.
+- Made baseline MIDI campaigns apply imported hidden-pixel bounding boxes automatically.
+- Reworked pixel-region replacement to use a border-only background estimate and pydicom's pixel-data
+  writer so redacted DICOM files remain structurally decodable.
+
 ## 0.7.2 - 2026-06-20
 
 - Fixed Windows mypy validation for the Tk desktop folder opener without changing runtime behavior.

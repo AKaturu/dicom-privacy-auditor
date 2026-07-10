@@ -260,7 +260,7 @@ def normalize_official_midi_results(
 
         temporary.replace(destination)
         restrict_file(destination)
-        if unmatched_destination and unmatched_temporary:
+        if unmatched_destination and unmatched_temporary and unmatched_handle is not None:
             unmatched_handle.close()
             unmatched_handle = None
             unmatched_temporary.replace(unmatched_destination)

@@ -46,7 +46,7 @@ The importer:
 
 - hashes the answer key for provenance;
 - indexes source DICOM objects by SOP Instance UID and Patient ID;
-- normalizes actions to `actions.jsonl`;
+- normalizes actions, scopes, and case-insensitive nested tag paths to `actions.jsonl`;
 - copies mapping CSVs into the imported workspace;
 - reports unresolved source paths without copying the source dataset.
 
@@ -102,9 +102,20 @@ Use dedicated candidate directories and preserve the official mapping files to a
 
 - `date shifted` and `uid changed` require a non-empty changed value.
 - `patid consistent` and `uid consistent` require the supplied mapping CSV.
-- text actions use literal substring tests against the target attribute.
+- text actions use literal substring tests against the exact answer-key sequence occurrence when a
+  `tag_ds` path is supplied. A terminal-tag fallback is used for older imported manifests.
 - `pixels hidden` requires a usable bounding box and verifies that the target region changed.
 - `pixels retained` currently requires exact decoded-pixel equality.
+
+The built-in `baseline` campaign reads reviewed `pixels hidden` boxes from the imported action ledger,
+replaces each region with a uniform local-border estimate, and writes pixel data through pydicom so the
+saved transfer syntax and Image Pixel attributes remain consistent. Frame-specific boxes remain
+unsupported and fail closed instead of being applied to the wrong frame.
+
+MIDI's official answer payload can encode hexadecimal tag paths in lowercase while pydicom renders tag
+labels in uppercase. This evaluator canonicalizes both forms before path traversal. Preserve unmodified
+official-validator results as a separate comparator; do not overwrite them with internal semantic
+adjudications.
 
 Exact pixel equality is intentionally conservative. It can mark lossless-equivalent transformations as failures if decoded arrays differ, and it is not a perceptual-similarity metric. Literal text checks do not determine whether surrounding content remains clinically useful or semantically identifying.
 

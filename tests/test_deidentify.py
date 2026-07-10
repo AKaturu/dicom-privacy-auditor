@@ -1,5 +1,8 @@
-from pydicom.dataset import Dataset
+import numpy as np
+import pydicom
+from pydicom.dataset import Dataset, FileMetaDataset
 from pydicom.sequence import Sequence
+from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
 from dicom_privacy_auditor.deidentify import UIDMapper, baseline_deidentify_dataset
 
@@ -33,3 +36,31 @@ def test_uid_mapper_is_consistent():
     mapper = UIDMapper("test")
     assert mapper.map("2.25.1") == mapper.map("2.25.1")
     assert mapper.map("2.25.1") != mapper.map("2.25.2")
+
+
+def test_pixel_redaction_replaces_only_the_reviewed_region_and_round_trips(tmp_path):
+    pixels = np.full((12, 12), 20, dtype=np.uint16)
+    pixels[4:8, 3:9] = np.arange(24, dtype=np.uint16).reshape(4, 6) + 200
+    dataset = Dataset()
+    dataset.file_meta = FileMetaDataset()
+    dataset.file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    dataset.SOPClassUID = SecondaryCaptureImageStorage
+    dataset.SOPInstanceUID = generate_uid()
+    dataset.set_pixel_data(pixels, "MONOCHROME2", 12, generate_instance_uid=False)
+
+    cleaned, stats = baseline_deidentify_dataset(dataset, pixel_bboxes=[(3, 4, 9, 8)])
+    cleaned_pixels = np.asarray(cleaned.pixel_array)
+    outside = np.ones(pixels.shape, dtype=bool)
+    outside[4:8, 3:9] = False
+
+    assert stats.pixel_regions_cleaned == 1
+    assert np.array_equal(cleaned_pixels[outside], pixels[outside])
+    assert np.unique(cleaned_pixels[4:8, 3:9]).size == 1
+    assert not np.array_equal(cleaned_pixels[4:8, 3:9], pixels[4:8, 3:9])
+    assert cleaned.BurnedInAnnotation == "NO"
+    assert cleaned.file_meta.TransferSyntaxUID == ExplicitVRLittleEndian
+
+    destination = tmp_path / "cleaned.dcm"
+    cleaned.save_as(destination, enforce_file_format=True)
+    reloaded = pydicom.dcmread(destination)
+    assert np.array_equal(reloaded.pixel_array, cleaned_pixels)

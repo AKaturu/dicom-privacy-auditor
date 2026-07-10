@@ -7,10 +7,18 @@ from contextlib import closing
 from copy import deepcopy
 
 import numpy as np
-from pydicom.dataset import FileDataset, FileMetaDataset
+import pydicom
+from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
+from pydicom.sequence import Sequence
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
-from dicom_privacy_auditor.benchmark.midi import evaluate_midi, import_midi, inspect_answer_key, read_actions
+from dicom_privacy_auditor.benchmark.midi import (
+    evaluate_midi,
+    import_midi,
+    inspect_answer_key,
+    pixel_bboxes_by_source_path,
+    read_actions,
+)
 
 
 def _write(path, *, patient_id, sop_uid, study_uid, study_date, description, pixels):
@@ -467,7 +475,71 @@ def test_midi_import_accepts_official_answer_data_payload(tmp_path):
     assert actions[0].tag_name == "Instance Creation Date"
     assert actions[0].value == "20151225"
     assert actions[0].source_relative_path == "case.dcm"
+    assert actions[0].scope == "Instance"
+    assert actions[0].tag_path == "00080012"
     assert actions[1].bbox_xyxy == (2, 3, 5, 7)
+    assert pixel_bboxes_by_source_path(imported / "actions.jsonl") == {
+        "case.dcm": [(2, 3, 5, 7)]
+    }
+
+
+def test_midi_evaluates_the_exact_official_sequence_path(tmp_path):
+    source_root = tmp_path / "source"
+    candidate_root = tmp_path / "candidate"
+    source_root.mkdir()
+    candidate_root.mkdir()
+    sop_uid = generate_uid()
+    pixels = np.zeros((8, 8), dtype=np.uint8)
+    for root, intended_value in ((source_root, "EXPECTED"), (candidate_root, "CHANGED")):
+        path = root / "case.dcm"
+        _write(
+            path,
+            patient_id="P1",
+            sop_uid=sop_uid,
+            study_uid=generate_uid(),
+            study_date="20200101",
+            description="SAFE",
+            pixels=pixels,
+        )
+        dataset = pydicom.dcmread(path)
+        decoy = Dataset()
+        decoy.ValueType = "EXPECTED"
+        intended = Dataset()
+        intended.ValueType = intended_value
+        dataset.ContentSequence = Sequence([decoy, intended])
+        dataset.save_as(path, enforce_file_format=True)
+
+    payload = {
+        "0": {
+            "scope": "<Instance>",
+            "tag": "<(0040,a040)>",
+            "tag_ds": "<(0040,a730)>[<0001>]<(0040,a040)>",
+            "tag_name": "<Value Type>",
+            "value": "<EXPECTED>",
+            "action": "<text_retained>",
+            "action_text": "<EXPECTED>",
+            "answer_category": ["dicom_standard"],
+        }
+    }
+    db = tmp_path / "official.sqlite"
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            "CREATE TABLE answer_data (PatientID TEXT, SOPInstanceUID TEXT, AnswerData TEXT)"
+        )
+        connection.execute(
+            "INSERT INTO answer_data VALUES (?, ?, ?)",
+            ("P1", sop_uid, json.dumps(payload)),
+        )
+        connection.commit()
+
+    imported = tmp_path / "imported"
+    import_midi(db, source_root, imported)
+    actions = read_actions(imported / "actions.jsonl")
+    assert actions[0].tag_path == "0040A730[1]/0040A040"
+
+    evaluation = evaluate_midi(imported, candidate_root, tmp_path / "evaluation")
+    assert evaluation.summary["failed"] == 1
+    assert evaluation.results[0].reason == "specified text is missing"
 
 
 def test_midi_import_uses_private_permissions_and_rejects_overlap(tmp_path):
