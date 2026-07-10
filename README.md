@@ -7,7 +7,9 @@
 
 A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating de-identification workflows across metadata, nested sequences, private attributes, filenames, UIDs, dates, DICOMDIR-like references, File Meta Information, preambles, overlays, and burned-in pixel annotations.
 
-![Synthetic DICOM privacy benchmark demo](docs/assets/demo.gif)
+[![Synthetic DICOM privacy benchmark demo](docs/assets/demo.gif)](https://cdn.jsdelivr.net/gh/AKaturu/dicom-privacy-auditor@main/docs/assets/demo.mp4)
+
+[Play the full demo video](https://cdn.jsdelivr.net/gh/AKaturu/dicom-privacy-auditor@main/docs/assets/demo.mp4)
 
 > **Research prototype—not a compliance certificate.** This repository does not prove compliance with DICOM PS3.15, HIPAA, GDPR, or institutional policy. A file with zero findings is not proven safe for release. The built-in de-identifier is a transparent benchmark baseline, not a production de-identification engine.
 
