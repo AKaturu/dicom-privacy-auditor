@@ -7,6 +7,8 @@
 - Made baseline MIDI campaigns apply imported hidden-pixel bounding boxes automatically.
 - Reworked pixel-region replacement to use a border-only background estimate and pydicom's pixel-data
   writer so redacted DICOM files remain structurally decodable.
+- Made official MIDI normalization use the answer key's lightweight row index, bounded payload caching,
+  narrow read-only queries, and larger output buffers instead of loading multi-gigabyte payloads.
 
 ## 0.7.2 - 2026-06-20
 

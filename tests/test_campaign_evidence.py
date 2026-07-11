@@ -17,7 +17,10 @@ from dicom_privacy_auditor.campaign.evidence import (
     generate_review_sample,
     verify_evidence_package,
 )
-from dicom_privacy_auditor.campaign.official_midi import normalize_official_midi_results
+from dicom_privacy_auditor.campaign.official_midi import (
+    _AnswerPayloadLookup,
+    normalize_official_midi_results,
+)
 
 
 def _evaluation(path, rows):
@@ -149,8 +152,42 @@ def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
     rows = output.read_text(encoding="utf-8").splitlines()
     assert result["normalized_rows"] == 1
     assert result["unmatched_rows"] == 0
+    assert result["answer_lookup_strategy"] == "rowid_index_with_bounded_payload_cache"
+    assert result["answer_uid_scan_strategy"] == "table_scan_fallback"
+    assert result["answer_payload_cache_size"] == 64
+    assert result["official_query_columns"] == [
+        "rowid",
+        "check_index",
+        "check_passed",
+        "action",
+        "instance",
+    ]
     assert rows[0] == "action_id,action,status"
     assert rows[1] == "9020ba1829209a3c5f6cea14,text retained,pass"
+
+
+def test_answer_payload_lookup_keeps_payloads_out_of_the_uid_index(tmp_path):
+    answer_db = tmp_path / "answer.db"
+    payload = {"0": {"action": "<text_retained>", "value": "<test>"}}
+    with sqlite3.connect(answer_db) as connection:
+        connection.execute(
+            'CREATE TABLE answer_data ("index" INTEGER, SOPInstanceUID TEXT, AnswerData TEXT)'
+        )
+        connection.execute('CREATE INDEX ix_answer_data_index ON answer_data ("index")')
+        connection.execute(
+            'INSERT INTO answer_data ("index", SOPInstanceUID, AnswerData) VALUES (?, ?, ?)',
+            (0, "1.2.3", json.dumps(payload)),
+        )
+
+    lookup = _AnswerPayloadLookup(answer_db, cache_size=1)
+    try:
+        assert lookup.rowids == {"1.2.3": "1"}
+        assert lookup.uid_scan_strategy == "ix_answer_data_index_ordered_scan"
+        assert lookup.cache == {}
+        assert lookup.get("1.2.3", "0") == ("1", payload["0"])
+        assert list(lookup.cache) == ["1.2.3"]
+    finally:
+        lookup.close()
 
 
 def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):

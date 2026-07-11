@@ -40,29 +40,46 @@ def _load_uid_new_to_old(path: Path) -> dict[str, str]:
 
 
 class _AnswerPayloadLookup:
-    def __init__(self, path: Path, *, cache_size: int = 2048) -> None:
+    def __init__(self, path: Path, *, cache_size: int = 64) -> None:
         self.cache_size = cache_size
-        self.rows: dict[str, tuple[str, str]] = {}
+        self.connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+        self.connection.execute("PRAGMA query_only = ON")
+        self.rowids: dict[str, str] = {}
         self.cache: OrderedDict[str, tuple[str, dict[str, Any]]] = OrderedDict()
-        with sqlite3.connect(path) as connection:
-            rows = connection.execute("SELECT rowid, SOPInstanceUID, AnswerData FROM answer_data")
-            for rowid, sop_instance_uid, payload_text in rows:
-                if sop_instance_uid not in (None, ""):
-                    self.rows[str(sop_instance_uid)] = (str(rowid), str(payload_text))
+        indexes = {row[1] for row in self.connection.execute("PRAGMA index_list(answer_data)")}
+        if "ix_answer_data_index" in indexes:
+            rows = self.connection.execute(
+                'SELECT rowid, SOPInstanceUID FROM answer_data '
+                'INDEXED BY ix_answer_data_index ORDER BY "index"'
+            )
+            self.uid_scan_strategy = "ix_answer_data_index_ordered_scan"
+        else:
+            rows = self.connection.execute("SELECT rowid, SOPInstanceUID FROM answer_data")
+            self.uid_scan_strategy = "table_scan_fallback"
+        for rowid, sop_instance_uid in rows:
+            if sop_instance_uid not in (None, ""):
+                self.rowids[str(sop_instance_uid)] = str(rowid)
 
     def close(self) -> None:
         self.cache.clear()
-        self.rows.clear()
+        self.rowids.clear()
+        self.connection.close()
 
     def _load_payload(self, sop_instance_uid: str) -> tuple[str, dict[str, Any]] | None:
         cached = self.cache.get(sop_instance_uid)
         if cached is not None:
             self.cache.move_to_end(sop_instance_uid)
             return cached
-        row = self.rows.get(sop_instance_uid)
-        if row is None:
+        rowid = self.rowids.get(sop_instance_uid)
+        if rowid is None:
             return None
-        rowid, payload_text = row
+        row = self.connection.execute(
+            "SELECT AnswerData FROM answer_data WHERE rowid = ?",
+            (rowid,),
+        ).fetchone()
+        if row is None or row[0] in (None, ""):
+            return None
+        payload_text = str(row[0])
         payload = json.loads(payload_text)
         if isinstance(payload, list):
             payload = {str(index): item for index, item in enumerate(payload)}
@@ -97,7 +114,8 @@ def _status_from_check_passed(value: Any) -> str:
 
 
 def _official_rows(path: Path) -> tuple[list[str], sqlite3.Connection]:
-    connection = sqlite3.connect(path)
+    connection = sqlite3.connect(f"{path.resolve().as_uri()}?mode=ro", uri=True)
+    connection.execute("PRAGMA query_only = ON")
     connection.row_factory = sqlite3.Row
     try:
         columns = [row[1] for row in connection.execute("PRAGMA table_info(validation_results)")]
@@ -164,7 +182,13 @@ def normalize_official_midi_results(
             prefix=f".{unmatched_destination.name}.", dir=unmatched_destination.parent
         )
         unmatched_temporary = Path(unmatched_name)
-        unmatched_handle = os.fdopen(unmatched_descriptor, "w", newline="", encoding="utf-8")
+        unmatched_handle = os.fdopen(
+            unmatched_descriptor,
+            "w",
+            buffering=1024 * 1024,
+            newline="",
+            encoding="utf-8",
+        )
 
     total_rows = 0
     normalized_rows = 0
@@ -172,7 +196,13 @@ def normalize_official_midi_results(
     action_counts: dict[str, int] = {}
     status_counts: dict[str, int] = {}
     try:
-        with os.fdopen(descriptor, "w", newline="", encoding="utf-8") as handle:
+        with os.fdopen(
+            descriptor,
+            "w",
+            buffering=1024 * 1024,
+            newline="",
+            encoding="utf-8",
+        ) as handle:
             writer = csv.DictWriter(handle, fieldnames=["action_id", "action", "status"])
             writer.writeheader()
             unmatched_writer = None
@@ -190,7 +220,10 @@ def normalize_official_midi_results(
                 )
                 unmatched_writer.writeheader()
 
-            query = "SELECT rowid AS __official_rowid__, * FROM validation_results"
+            query = (
+                "SELECT rowid AS __official_rowid__, check_index, check_passed, action, instance "
+                "FROM validation_results"
+            )
             for row in connection.execute(query):
                 total_rows += 1
                 candidate_instance = _clean_uid(row["instance"])
@@ -277,6 +310,16 @@ def normalize_official_midi_results(
             "normalized_rows": normalized_rows,
             "unmatched_rows": unmatched_rows,
             "unmatched_output": str(unmatched_destination) if unmatched_destination else None,
+            "answer_lookup_strategy": "rowid_index_with_bounded_payload_cache",
+            "answer_uid_scan_strategy": answer_lookup.uid_scan_strategy,
+            "answer_payload_cache_size": answer_lookup.cache_size,
+            "official_query_columns": [
+                "rowid",
+                "check_index",
+                "check_passed",
+                "action",
+                "instance",
+            ],
             "action_counts": dict(sorted(action_counts.items())),
             "status_counts": dict(sorted(status_counts.items())),
         }
