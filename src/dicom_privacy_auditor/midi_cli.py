@@ -36,6 +36,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=Path,
         help="Override the source path stored in a migrated MIDI import manifest",
     )
+    evaluate.add_argument(
+        "--embedded-results-limit",
+        type=int,
+        default=10000,
+        help="Maximum result rows to embed in midi_evaluation.json; full results are always written to CSV",
+    )
+    evaluate.add_argument(
+        "--cache-size",
+        type=int,
+        default=16,
+        help="Number of recent DICOM datasets/pixel arrays to cache during evaluation",
+    )
+    evaluate.add_argument(
+        "--progress-interval",
+        type=int,
+        default=100000,
+        help="Write evaluation progress every N actions; set 0 to disable",
+    )
     return parser
 
 
@@ -65,6 +83,9 @@ def main(argv: list[str] | None = None) -> int:
         patient_mapping=args.patient_mapping,
         uid_mapping=args.uid_mapping,
         source_root=args.source_root,
+        embedded_results_limit=args.embedded_results_limit,
+        cache_size=args.cache_size,
+        progress_interval=args.progress_interval,
     )
     print(json.dumps(evaluation.summary, indent=2))
     return 1 if evaluation.summary["failed"] or evaluation.summary["errors"] else 0

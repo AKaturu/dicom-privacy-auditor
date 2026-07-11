@@ -3,6 +3,8 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import numpy as np
+import pydicom
 from pydicom.dataset import FileDataset, FileMetaDataset
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
@@ -46,6 +48,41 @@ def test_midi_campaign_noop_fixture(tmp_path):
     result = run_tool(imported, tmp_path / "campaign", tool="noop")
     assert result.status == "complete"
     assert result.evaluation_summary["failed"] == 1
+
+
+def test_midi_campaign_baseline_applies_imported_pixel_regions(tmp_path):
+    images = tmp_path / "images"
+    images.mkdir()
+    source = images / "one.dcm"
+    dataset = _write(source)
+    pixels = np.full((10, 10), 12, dtype=np.uint8)
+    pixels[2:6, 3:8] = np.arange(20, dtype=np.uint8).reshape(4, 5) + 100
+    dataset.set_pixel_data(pixels, "MONOCHROME2", 8, generate_instance_uid=False)
+    dataset.save_as(source, enforce_file_format=True)
+
+    db = tmp_path / "answers.sqlite"
+    with sqlite3.connect(db) as connection:
+        connection.execute(
+            """CREATE TABLE answers (
+                action TEXT, sop_instance_uid TEXT, relative_path TEXT,
+                x1 INTEGER, y1 INTEGER, x2 INTEGER, y2 INTEGER
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answers VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("pixels hidden", str(dataset.SOPInstanceUID), "one.dcm", 3, 2, 8, 6),
+        )
+        connection.commit()
+
+    imported = tmp_path / "imported"
+    import_midi(db, images, imported)
+    workspace = tmp_path / "campaign"
+    result = run_tool(imported, workspace, tool="baseline")
+    cleaned = np.asarray(pydicom.dcmread(workspace / "outputs" / "baseline" / "one.dcm").pixel_array)
+
+    assert result.status == "complete"
+    assert result.evaluation_summary["failed"] == 0
+    assert np.unique(cleaned[2:6, 3:8]).size == 1
 
 
 def test_campaign_source_root_override_after_migration(tmp_path):

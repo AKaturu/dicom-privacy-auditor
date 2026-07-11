@@ -134,15 +134,24 @@ def _clean_pixel_regions(
         x2, y2 = min(pixels.shape[1], int(x2)), min(pixels.shape[0], int(y2))
         if x2 <= x1 or y2 <= y1:
             continue
-        # Use the local median so the benchmark cleaner does not add a stark black box.
-        surround = pixels[
-            max(0, y1 - 3) : min(pixels.shape[0], y2 + 3), max(0, x1 - 3) : min(pixels.shape[1], x2 + 3)
-        ]
-        fill = int(np.median(surround)) if surround.size else 0
+        # Estimate the background from a border that excludes the text-bearing box.
+        border_x1, border_y1 = max(0, x1 - 3), max(0, y1 - 3)
+        border_x2 = min(pixels.shape[1], x2 + 3)
+        border_y2 = min(pixels.shape[0], y2 + 3)
+        border = pixels[border_y1:border_y2, border_x1:border_x2]
+        mask = np.ones(border.shape, dtype=bool)
+        mask[y1 - border_y1 : y2 - border_y1, x1 - border_x1 : x2 - border_x1] = False
+        surround = border[mask]
+        fill = np.median(surround) if surround.size else 0
         pixels[y1:y2, x1:x2] = fill
         stats.pixel_regions_cleaned += 1
-    dataset.PixelData = np.ascontiguousarray(pixels).tobytes()
     if stats.pixel_regions_cleaned:
+        dataset.set_pixel_data(
+            np.ascontiguousarray(pixels),
+            str(dataset.PhotometricInterpretation),
+            int(dataset.BitsStored),
+            generate_instance_uid=False,
+        )
         dataset.BurnedInAnnotation = "NO"
 
 

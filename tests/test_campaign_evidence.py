@@ -1,15 +1,25 @@
 from __future__ import annotations
 
 import json
+import sqlite3
 
 import pytest
 
+from dicom_privacy_auditor.campaign.disagreements import (
+    adjudicate_parity_disagreements,
+    analyze_parity_disagreements,
+)
 from dicom_privacy_auditor.campaign.evidence import (
     archive_evidence_package,
     build_evidence_package,
     compare_evaluators,
+    compare_evaluators_streaming,
     generate_review_sample,
     verify_evidence_package,
+)
+from dicom_privacy_auditor.campaign.official_midi import (
+    _AnswerPayloadLookup,
+    normalize_official_midi_results,
 )
 
 
@@ -43,6 +53,341 @@ def test_compare_evaluators_reports_discrepancies(tmp_path):
     result = compare_evaluators(left, right, tmp_path / "parity.json")
     assert result["discrepancy_count"] == 1
     assert result["exact_status_agreement"] == 0
+
+
+def test_streaming_parity_compares_csv_inputs_and_truncates_discrepancies(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text(
+        "action_id,action,status\na,uid changed,pass\nb,text removed,fail\nc,tag retained,unresolved\n",
+        encoding="utf-8",
+    )
+    right = tmp_path / "official.csv"
+    right.write_text(
+        "action_id,action,status\na,uid changed,True\nb,text removed,pass\nd,tag retained,False\n",
+        encoding="utf-8",
+    )
+
+    result = compare_evaluators_streaming(left, right, tmp_path / "parity.json", discrepancy_limit=2)
+
+    assert result["internal_row_count"] == 3
+    assert result["official_row_count"] == 3
+    assert result["union_action_count"] == 4
+    assert result["exact_status_matches"] == 1
+    assert result["discrepancy_count"] == 3
+    assert result["discrepancies_truncated"] is True
+    assert result["join_strategy"] == "bounded_hash_partitions"
+    assert result["partition_count"] == 64
+    assert result["confusion"]["pass|pass"] == 1
+    assert result["confusion"]["fail|pass"] == 1
+    assert result["confusion"]["unresolved|missing"] == 1
+    assert result["confusion"]["missing|fail"] == 1
+
+
+def test_streaming_parity_rejects_duplicate_action_ids(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text("action_id,status\na,pass\na,fail\n", encoding="utf-8")
+    right = tmp_path / "official.csv"
+    right.write_text("action_id,status\na,pass\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate internal action_id"):
+        compare_evaluators_streaming(left, right, tmp_path / "parity.json")
+
+
+def test_streaming_parity_rejects_duplicate_official_action_ids_and_cleans_partitions(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text("action_id,status\na,pass\n", encoding="utf-8")
+    right = tmp_path / "official.csv"
+    right.write_text("action_id,status\na,pass\na,fail\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate official action_id"):
+        compare_evaluators_streaming(left, right, tmp_path / "parity.json")
+
+    assert not list(tmp_path.glob(".parity.*.parts"))
+
+
+def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
+    answer_db = tmp_path / "answer.db"
+    with sqlite3.connect(answer_db) as connection:
+        connection.execute("CREATE TABLE answer_data (SOPInstanceUID TEXT, AnswerData TEXT)")
+        connection.execute(
+            "INSERT INTO answer_data (SOPInstanceUID, AnswerData) VALUES (?, ?)",
+            (
+                "1.2.840.old",
+                json.dumps(
+                    {
+                        "0": {
+                            "tag": "<(0008,0005)>",
+                            "tag_ds": "<(0008,0005)>",
+                            "tag_name": "<Specific Character Set>",
+                            "value": "<ISO_IR 100>",
+                            "action": "<text_retained>",
+                        }
+                    }
+                ),
+            ),
+        )
+
+    official_db = tmp_path / "official.db"
+    with sqlite3.connect(official_db) as connection:
+        connection.execute(
+            """
+            CREATE TABLE validation_results (
+                check_index INTEGER,
+                check_passed INTEGER,
+                action TEXT,
+                answer_value TEXT,
+                instance TEXT,
+                tag TEXT,
+                tag_name TEXT
+            )
+            """
+        )
+        connection.execute(
+            """
+            INSERT INTO validation_results
+            (check_index, check_passed, action, answer_value, instance, tag, tag_name)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (0, 1, "<text_retained>", "<MUTATED>", "1.2.840.new", "<(0008,0005)>", "Specific Character Set"),
+        )
+
+    mapping = tmp_path / "uid_mapping.csv"
+    mapping.write_text("id_old,id_new\n1.2.840.old,1.2.840.new\n", encoding="utf-8")
+
+    output = tmp_path / "official-normalized.csv"
+    result = normalize_official_midi_results(official_db, answer_db, mapping, output)
+
+    rows = output.read_text(encoding="utf-8").splitlines()
+    assert result["normalized_rows"] == 1
+    assert result["unmatched_rows"] == 0
+    assert result["answer_lookup_strategy"] == "rowid_index_with_bounded_payload_cache"
+    assert result["answer_uid_scan_strategy"] == "table_scan_fallback"
+    assert result["answer_payload_cache_size"] == 64
+    assert result["official_query_columns"] == [
+        "rowid",
+        "check_index",
+        "check_passed",
+        "action",
+        "instance",
+    ]
+    assert rows[0] == "action_id,action,status"
+    assert rows[1] == "9020ba1829209a3c5f6cea14,text retained,pass"
+
+
+def test_answer_payload_lookup_keeps_payloads_out_of_the_uid_index(tmp_path):
+    answer_db = tmp_path / "answer.db"
+    payload = {"0": {"action": "<text_retained>", "value": "<test>"}}
+    with sqlite3.connect(answer_db) as connection:
+        connection.execute('CREATE TABLE answer_data ("index" INTEGER, SOPInstanceUID TEXT, AnswerData TEXT)')
+        connection.execute('CREATE INDEX ix_answer_data_index ON answer_data ("index")')
+        connection.execute(
+            'INSERT INTO answer_data ("index", SOPInstanceUID, AnswerData) VALUES (?, ?, ?)',
+            (0, "1.2.3", json.dumps(payload)),
+        )
+
+    lookup = _AnswerPayloadLookup(answer_db, cache_size=1)
+    try:
+        assert lookup.rowids == {"1.2.3": "1"}
+        assert lookup.uid_scan_strategy == "ix_answer_data_index_ordered_scan"
+        assert lookup.cache == {}
+        assert lookup.get("1.2.3", "0") == ("1", payload["0"])
+        assert list(lookup.cache) == ["1.2.3"]
+    finally:
+        lookup.close()
+
+
+def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
+    internal = tmp_path / "internal.csv"
+    internal.write_text(
+        "action_id,action,category,status,reason,source_present,candidate_present\n"
+        "a,text retained,dicom_standard,pass,retained,True,True\n"
+        "b,text retained,patient_name,fail,missing token,True,True\n"
+        "c,tag retained,dicom_standard,pass,tag retained,True,True\n"
+        "d,pixels retained,,unresolved,Source object could not be resolved,False,True\n",
+        encoding="utf-8",
+    )
+    official = tmp_path / "official.csv"
+    official.write_text(
+        "action_id,action,status\n"
+        "a,text retained,pass\n"
+        "b,text retained,pass\n"
+        "c,tag retained,fail\n"
+        "d,pixels retained,pass\n"
+        "e,text removed,pass\n",
+        encoding="utf-8",
+    )
+    actions = tmp_path / "actions.jsonl"
+    actions.write_text(
+        json.dumps({"action_id": "b", "tag_name": "Patient Name"})
+        + "\n"
+        + json.dumps({"action_id": "c", "tag_name": "Image Type"})
+        + "\n"
+        + json.dumps({"action_id": "d", "tag_name": "Pixel Data"})
+        + "\n",
+        encoding="utf-8",
+    )
+
+    result = analyze_parity_disagreements(
+        internal,
+        official,
+        tmp_path / "review.json",
+        report_markdown=tmp_path / "review.md",
+        actions_jsonl=actions,
+        top_n=10,
+        sample_limit=2,
+    )
+
+    assert result["internal_row_count"] == 4
+    assert result["official_row_count"] == 5
+    assert result["exact_status_matches"] == 1
+    assert result["disagreement_count"] == 4
+    assert result["join_strategy"] == "bounded_hash_partitions"
+    assert result["partition_count"] == 64
+    assert result["confusion"]["fail|pass"] == 1
+    assert result["confusion"]["missing|pass"] == 1
+    assert result["top_action_status_disagreements"][0]["count"] == 1
+    assert {row["tag_name"] for row in result["tag_enrichment"]["top_tag_names"]} >= {
+        "Patient Name",
+        "Image Type",
+        "Pixel Data",
+    }
+    assert len(result["sample_disagreements"]) == 2
+    assert set(result["sample_disagreements_by_confusion"]) == {
+        "fail|pass",
+        "missing|pass",
+        "pass|fail",
+        "unresolved|pass",
+    }
+    assert (
+        (tmp_path / "review.md").read_text(encoding="utf-8").startswith("# MIDI-B Parity Disagreement Review")
+    )
+
+
+def test_analyze_parity_disagreements_rejects_duplicate_internal_ids_and_cleans_partitions(tmp_path):
+    internal = tmp_path / "internal.csv"
+    internal.write_text(
+        "action_id,action,status\na,text retained,pass\na,text retained,fail\n",
+        encoding="utf-8",
+    )
+    official = tmp_path / "official.csv"
+    official.write_text("action_id,action,status\na,text retained,pass\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate internal action_id"):
+        analyze_parity_disagreements(internal, official, tmp_path / "review.json")
+
+    assert not list(tmp_path.glob(".review.*.parts"))
+
+
+def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
+    source = tmp_path / "disagreement.json"
+    source.write_text(
+        json.dumps(
+            {
+                "schema_version": "1.0",
+                "disagreement_count": 13,
+                "confusion": {
+                    "fail|fail": 4,
+                    "fail|pass": 7,
+                    "pass|fail": 3,
+                    "pass|pass": 8,
+                    "unresolved|pass": 1,
+                },
+                "top_action_status_disagreements": [
+                    {
+                        "action": "date shifted",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 4,
+                    },
+                    {
+                        "action": "text retained",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                    {
+                        "action": "tag retained",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 2,
+                    },
+                    {
+                        "action": "pixels retained",
+                        "internal_status": "unresolved",
+                        "official_status": "pass",
+                        "count": 2,
+                    },
+                    {
+                        "action": "unknown",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
+                    {
+                        "action": "text removed",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
+                ],
+                "top_category_status_disagreements": [
+                    {
+                        "category": "uid",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 4,
+                    },
+                    {
+                        "category": "dicom_standard",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 2,
+                    },
+                    {
+                        "category": "patient_name",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                    {
+                        "category": "<blank>",
+                        "internal_status": "fail",
+                        "official_status": "pass",
+                        "count": 3,
+                    },
+                    {
+                        "category": "patient_address;comment",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = adjudicate_parity_disagreements(
+        source,
+        tmp_path / "adjudication.json",
+        report_markdown=tmp_path / "ADJUDICATION.md",
+    )
+
+    assert result["summary"]["action_cluster_rows"] == 13
+    assert result["summary"]["action_cluster_coverage"] == 1
+    assert result["confusion_summary"]["official_pass"] == 16
+    assert result["confusion_summary"]["official_score"] == 16 / 23
+    dispositions = {row["disposition"] for row in result["action_adjudications"]}
+    assert "internal_strict_false_negative_relative_to_official" in dispositions
+    assert "presence_or_null_representation_mismatch" in dispositions
+    assert "manual_review_required" in dispositions
+    assert "official_token_residual_internal_literal_pass" in dispositions
+    assert result["category_adjudications"][0]["family"] == "uid_presence_mapping_policy"
+    assert (
+        (tmp_path / "ADJUDICATION.md")
+        .read_text(encoding="utf-8")
+        .startswith("# MIDI-B Disagreement Category Adjudication")
+    )
 
 
 def test_evidence_package_redacts_paths_and_checksums(tmp_path):

@@ -4,12 +4,14 @@ import argparse
 import json
 from pathlib import Path
 
+from .disagreements import adjudicate_parity_disagreements, analyze_parity_disagreements
 from .evidence import (
     MAX_EVIDENCE_ARCHIVE_MEMBERS,
     MAX_EVIDENCE_UNCOMPRESSED_BYTES,
     archive_evidence_package,
     build_evidence_package,
     compare_evaluators,
+    compare_evaluators_streaming,
     generate_review_sample,
     verify_evidence_package,
 )
@@ -20,6 +22,7 @@ from .midi_live import (
     run_campaign,
     run_tool,
 )
+from .official_midi import normalize_official_midi_results
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -75,6 +78,40 @@ def build_parser() -> argparse.ArgumentParser:
     parity.add_argument("internal", type=Path)
     parity.add_argument("official", type=Path)
     parity.add_argument("output", type=Path)
+    parity_stream = sub.add_parser(
+        "parity-stream", help="Compare large CSV/JSON evaluator outputs with bounded memory"
+    )
+    parity_stream.add_argument("internal", type=Path)
+    parity_stream.add_argument("official", type=Path)
+    parity_stream.add_argument("output", type=Path)
+    parity_stream.add_argument("--discrepancy-limit", type=int, default=10_000)
+    normalize = sub.add_parser(
+        "normalize-official-midi",
+        help="Normalize official MIDI validator SQLite results to action_id/action/status CSV",
+    )
+    normalize.add_argument("official_db", type=Path)
+    normalize.add_argument("answer_db", type=Path)
+    normalize.add_argument("uid_mapping", type=Path)
+    normalize.add_argument("output", type=Path)
+    normalize.add_argument("--unmatched-output", type=Path)
+    review = sub.add_parser(
+        "review-disagreements",
+        help="Summarize evaluator disagreement clusters without exposing raw values",
+    )
+    review.add_argument("internal", type=Path)
+    review.add_argument("official", type=Path)
+    review.add_argument("output", type=Path)
+    review.add_argument("--report-markdown", type=Path)
+    review.add_argument("--actions-jsonl", type=Path)
+    review.add_argument("--top-n", type=int, default=25)
+    review.add_argument("--sample-limit", type=int, default=0)
+    adjudicate = sub.add_parser(
+        "adjudicate-disagreements",
+        help="Adjudicate aggregate disagreement categories for publication-safe interpretation",
+    )
+    adjudicate.add_argument("disagreement_json", type=Path)
+    adjudicate.add_argument("output", type=Path)
+    adjudicate.add_argument("--report-markdown", type=Path)
     evidence = sub.add_parser(
         "evidence-package", help="Build a redacted, checksummed campaign evidence package"
     )
@@ -130,6 +167,45 @@ def main(argv: list[str] | None = None) -> int:
         payload = compare_evaluators(args.internal, args.official, args.output)
         print(json.dumps(payload, indent=2))
         return 0 if payload["discrepancy_count"] == 0 else 2
+    if args.command == "parity-stream":
+        payload = compare_evaluators_streaming(
+            args.internal,
+            args.official,
+            args.output,
+            discrepancy_limit=args.discrepancy_limit,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["discrepancy_count"] == 0 else 2
+    if args.command == "normalize-official-midi":
+        payload = normalize_official_midi_results(
+            args.official_db,
+            args.answer_db,
+            args.uid_mapping,
+            args.output,
+            unmatched_output=args.unmatched_output,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0 if payload["unmatched_rows"] == 0 else 2
+    if args.command == "review-disagreements":
+        payload = analyze_parity_disagreements(
+            args.internal,
+            args.official,
+            args.output,
+            report_markdown=args.report_markdown,
+            actions_jsonl=args.actions_jsonl,
+            top_n=args.top_n,
+            sample_limit=args.sample_limit,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
+    if args.command == "adjudicate-disagreements":
+        payload = adjudicate_parity_disagreements(
+            args.disagreement_json,
+            args.output,
+            report_markdown=args.report_markdown,
+        )
+        print(json.dumps(payload, indent=2))
+        return 0
     if args.command == "evidence-package":
         payload = build_evidence_package(
             args.workspace, args.destination, campaign_id=args.campaign_id, overwrite=args.overwrite

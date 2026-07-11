@@ -1,6 +1,6 @@
 # Authors and Contributions
 
-## Abhinav Katuru
+## Abinav Katuru
 - Conceptualization
 - Clinical requirements
 - Methodology

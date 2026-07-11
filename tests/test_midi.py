@@ -1,15 +1,24 @@
 from __future__ import annotations
 
 import csv
+import json
 import sqlite3
 from contextlib import closing
 from copy import deepcopy
 
 import numpy as np
-from pydicom.dataset import FileDataset, FileMetaDataset
+import pydicom
+from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
+from pydicom.sequence import Sequence
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
-from dicom_privacy_auditor.benchmark.midi import evaluate_midi, import_midi, inspect_answer_key
+from dicom_privacy_auditor.benchmark.midi import (
+    evaluate_midi,
+    import_midi,
+    inspect_answer_key,
+    pixel_bboxes_by_source_path,
+    read_actions,
+)
 
 
 def _write(path, *, patient_id, sop_uid, study_uid, study_date, description, pixels):
@@ -34,6 +43,45 @@ def _write(path, *, patient_id, sop_uid, study_uid, study_date, description, pix
     ds.HighBit = 7
     ds.PixelRepresentation = 0
     ds.PixelData = pixels.astype(np.uint8).tobytes()
+    ds.save_as(path, enforce_file_format=True)
+
+
+def _write_without_pixels(path, *, patient_id, sop_uid, study_uid):
+    meta = FileMetaDataset()
+    meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+    meta.MediaStorageSOPInstanceUID = sop_uid
+    meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
+    ds.SOPClassUID = SecondaryCaptureImageStorage
+    ds.SOPInstanceUID = sop_uid
+    ds.StudyInstanceUID = study_uid
+    ds.SeriesInstanceUID = generate_uid()
+    ds.PatientID = patient_id
+    ds.Modality = "OT"
+    ds.save_as(path, enforce_file_format=True)
+
+
+def _write_rgb_without_planar_configuration(path, *, patient_id, sop_uid, study_uid):
+    meta = FileMetaDataset()
+    meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+    meta.MediaStorageSOPInstanceUID = sop_uid
+    meta.TransferSyntaxUID = ExplicitVRLittleEndian
+    ds = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
+    ds.SOPClassUID = SecondaryCaptureImageStorage
+    ds.SOPInstanceUID = sop_uid
+    ds.StudyInstanceUID = study_uid
+    ds.SeriesInstanceUID = generate_uid()
+    ds.PatientID = patient_id
+    ds.Modality = "OT"
+    ds.Rows = 2
+    ds.Columns = 2
+    ds.SamplesPerPixel = 3
+    ds.PhotometricInterpretation = "RGB"
+    ds.BitsAllocated = 8
+    ds.BitsStored = 8
+    ds.HighBit = 7
+    ds.PixelRepresentation = 0
+    ds.PixelData = bytes(range(12))
     ds.save_as(path, enforce_file_format=True)
 
 
@@ -251,7 +299,22 @@ def test_midi_sqlite_import_and_action_evaluation(tmp_path):
     assert evaluation.summary["passed"] == 10
     assert evaluation.summary["failed"] == 0
     assert evaluation.summary["score"] == 1.0
+    assert evaluation.results_truncated is False
+    assert evaluation.results_embedded == 10
     assert (tmp_path / "evaluation" / "MIDI_REPORT.md").exists()
+
+    limited = evaluate_midi(
+        imported,
+        candidate_root,
+        tmp_path / "evaluation-limited",
+        embedded_results_limit=1,
+    )
+    assert limited.summary["actions"] == 10
+    assert limited.results_truncated is True
+    assert limited.results_embedded == 1
+    assert len(limited.results) == 1
+    with (tmp_path / "evaluation-limited" / "midi_results.csv").open(encoding="utf-8") as handle:
+        assert sum(1 for _ in handle) == 11
 
 
 def test_mapping_reader_accepts_descriptive_public_headers(tmp_path):
@@ -263,6 +326,216 @@ def test_mapping_reader_accepts_descriptive_public_headers(tmp_path):
         writer.writerow(["OriginalPatientID", "AnonymizedPatientID"])
         writer.writerow(["P001", "MIDI001"])
     assert _read_mapping(path) == {"P001": "MIDI001"}
+
+
+def test_midi_pixel_action_without_pixel_data_is_unresolved(tmp_path):
+    source_root = tmp_path / "source"
+    candidate_root = tmp_path / "candidate"
+    source_root.mkdir()
+    candidate_root.mkdir()
+    old_sop, new_sop = generate_uid(), generate_uid()
+    _write_without_pixels(
+        source_root / "case.dcm",
+        patient_id="OLDPAT",
+        sop_uid=old_sop,
+        study_uid=generate_uid(),
+    )
+    _write_without_pixels(
+        candidate_root / "case.dcm",
+        patient_id="NEWPAT",
+        sop_uid=new_sop,
+        study_uid=generate_uid(),
+    )
+    db = tmp_path / "answer_key.sqlite"
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            """CREATE TABLE answer_key (
+                action TEXT, sop_instance_uid TEXT, patient_id TEXT, relative_path TEXT
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answer_key VALUES (?, ?, ?, ?)",
+            ("pixels retained", old_sop, "OLDPAT", "case.dcm"),
+        )
+        connection.commit()
+    uid_map = tmp_path / "uid.csv"
+    _mapping(uid_map, [(old_sop, new_sop)])
+    imported = tmp_path / "imported"
+    import_midi(db, source_root, imported, uid_mapping=uid_map)
+
+    evaluation = evaluate_midi(imported, candidate_root, tmp_path / "evaluation")
+    assert evaluation.summary["unresolved"] == 1
+    assert evaluation.summary["errors"] == 0
+    assert evaluation.results[0].status == "unresolved"
+    assert "Pixel comparison unavailable" in evaluation.results[0].reason
+
+
+def test_midi_pixel_action_with_missing_planar_configuration_is_unresolved(tmp_path):
+    source_root = tmp_path / "source"
+    candidate_root = tmp_path / "candidate"
+    source_root.mkdir()
+    candidate_root.mkdir()
+    old_sop, new_sop = generate_uid(), generate_uid()
+    _write_rgb_without_planar_configuration(
+        source_root / "case.dcm",
+        patient_id="OLDPAT",
+        sop_uid=old_sop,
+        study_uid=generate_uid(),
+    )
+    _write_rgb_without_planar_configuration(
+        candidate_root / "case.dcm",
+        patient_id="NEWPAT",
+        sop_uid=new_sop,
+        study_uid=generate_uid(),
+    )
+    db = tmp_path / "answer_key.sqlite"
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            """CREATE TABLE answer_key (
+                action TEXT, sop_instance_uid TEXT, patient_id TEXT, relative_path TEXT
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answer_key VALUES (?, ?, ?, ?)",
+            ("pixels retained", old_sop, "OLDPAT", "case.dcm"),
+        )
+        connection.commit()
+    uid_map = tmp_path / "uid.csv"
+    _mapping(uid_map, [(old_sop, new_sop)])
+    imported = tmp_path / "imported"
+    import_midi(db, source_root, imported, uid_mapping=uid_map)
+
+    evaluation = evaluate_midi(imported, candidate_root, tmp_path / "evaluation")
+    assert evaluation.summary["unresolved"] == 1
+    assert evaluation.summary["errors"] == 0
+    assert evaluation.results[0].status == "unresolved"
+    assert "Planar Configuration" in evaluation.results[0].reason
+
+
+def test_midi_import_accepts_official_answer_data_payload(tmp_path):
+    source_root = tmp_path / "source"
+    source_root.mkdir()
+    sop_uid = generate_uid()
+    patient_id = "8371727310"
+    _write(
+        source_root / "case.dcm",
+        patient_id=patient_id,
+        sop_uid=sop_uid,
+        study_uid=generate_uid(),
+        study_date="20200101",
+        description="SECRET SAFE",
+        pixels=np.zeros((8, 8), dtype=np.uint8),
+    )
+    db = tmp_path / "official.sqlite"
+    payload = {
+        "0": {
+            "scope": "<Instance>",
+            "tag": "<(0008,0012)>",
+            "tag_ds": "<(0008,0012)>",
+            "tag_name": "<Instance Creation Date>",
+            "value": "<20151225>",
+            "action": "<date_shifted>",
+            "action_text": "<20151225>",
+            "answer_category": ["date"],
+        },
+        "1": {
+            "scope": "<Instance>",
+            "tag": None,
+            "tag_ds": None,
+            "tag_name": None,
+            "value": None,
+            "action": "<pixels_hidden>",
+            "action_text": '<{"text":"JT","top_left":[2,3],"bottom_right":[5,7]}>',
+            "answer_category": [],
+        },
+    }
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute(
+            """CREATE TABLE answer_data (
+                PatientID TEXT,
+                SOPInstanceUID TEXT,
+                AnswerData TEXT
+            )"""
+        )
+        connection.execute(
+            "INSERT INTO answer_data VALUES (?, ?, ?)",
+            (patient_id, sop_uid, json.dumps(payload)),
+        )
+        connection.commit()
+
+    schema = inspect_answer_key(db)
+    assert schema[0]["payload_column"] == "AnswerData"
+    assert schema[0]["recognized_action_values"] == ["date shifted", "pixels hidden"]
+    imported = tmp_path / "imported"
+    manifest = import_midi(db, source_root, imported)
+    assert manifest.action_count == 2
+    assert manifest.unresolved_source_paths == 0
+    actions = read_actions(imported / "actions.jsonl")
+    assert actions[0].tag == "00080012"
+    assert actions[0].tag_name == "Instance Creation Date"
+    assert actions[0].value == "20151225"
+    assert actions[0].source_relative_path == "case.dcm"
+    assert actions[0].scope == "Instance"
+    assert actions[0].tag_path == "00080012"
+    assert actions[1].bbox_xyxy == (2, 3, 5, 7)
+    assert pixel_bboxes_by_source_path(imported / "actions.jsonl") == {"case.dcm": [(2, 3, 5, 7)]}
+
+
+def test_midi_evaluates_the_exact_official_sequence_path(tmp_path):
+    source_root = tmp_path / "source"
+    candidate_root = tmp_path / "candidate"
+    source_root.mkdir()
+    candidate_root.mkdir()
+    sop_uid = generate_uid()
+    pixels = np.zeros((8, 8), dtype=np.uint8)
+    for root, intended_value in ((source_root, "EXPECTED"), (candidate_root, "CHANGED")):
+        path = root / "case.dcm"
+        _write(
+            path,
+            patient_id="P1",
+            sop_uid=sop_uid,
+            study_uid=generate_uid(),
+            study_date="20200101",
+            description="SAFE",
+            pixels=pixels,
+        )
+        dataset = pydicom.dcmread(path)
+        decoy = Dataset()
+        decoy.ValueType = "EXPECTED"
+        intended = Dataset()
+        intended.ValueType = intended_value
+        dataset.ContentSequence = Sequence([decoy, intended])
+        dataset.save_as(path, enforce_file_format=True)
+
+    payload = {
+        "0": {
+            "scope": "<Instance>",
+            "tag": "<(0040,a040)>",
+            "tag_ds": "<(0040,a730)>[<0001>]<(0040,a040)>",
+            "tag_name": "<Value Type>",
+            "value": "<EXPECTED>",
+            "action": "<text_retained>",
+            "action_text": "<EXPECTED>",
+            "answer_category": ["dicom_standard"],
+        }
+    }
+    db = tmp_path / "official.sqlite"
+    with closing(sqlite3.connect(db)) as connection:
+        connection.execute("CREATE TABLE answer_data (PatientID TEXT, SOPInstanceUID TEXT, AnswerData TEXT)")
+        connection.execute(
+            "INSERT INTO answer_data VALUES (?, ?, ?)",
+            ("P1", sop_uid, json.dumps(payload)),
+        )
+        connection.commit()
+
+    imported = tmp_path / "imported"
+    import_midi(db, source_root, imported)
+    actions = read_actions(imported / "actions.jsonl")
+    assert actions[0].tag_path == "0040A730[1]/0040A040"
+
+    evaluation = evaluate_midi(imported, candidate_root, tmp_path / "evaluation")
+    assert evaluation.summary["failed"] == 1
+    assert evaluation.results[0].reason == "specified text is missing"
 
 
 def test_midi_import_uses_private_permissions_and_rejects_overlap(tmp_path):

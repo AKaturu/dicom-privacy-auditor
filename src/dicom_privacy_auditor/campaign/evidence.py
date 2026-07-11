@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import csv
 import hashlib
 import json
 import os
 import random
 import shutil
 import tarfile
+import tempfile
 from collections import Counter, defaultdict
+from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Any
@@ -174,6 +177,220 @@ def compare_evaluators(
     atomic_write_text(destination, json.dumps(result, indent=2, sort_keys=True) + "\n")
     restrict_file(destination)
     return result
+
+
+def _canonical_status(value: Any) -> str:
+    status = str(value).strip().lower()
+    if status in {"pass", "passed", "success", "succeeded", "true", "1", "yes"}:
+        return "pass"
+    if status in {"fail", "failed", "failure", "false", "0", "no"}:
+        return "fail"
+    if status in {"unresolved", "unknown", "missing", "error"}:
+        return status
+    return status
+
+
+def _iter_result_rows(path: Path) -> Iterator[dict[str, str]]:
+    if path.suffix.lower() == ".csv":
+        with path.open(newline="", encoding="utf-8") as handle:
+            reader = csv.DictReader(handle)
+            if (
+                not reader.fieldnames
+                or "action_id" not in reader.fieldnames
+                or "status" not in reader.fieldnames
+            ):
+                raise ValueError("CSV evaluation input must contain action_id and status columns")
+            for row in reader:
+                action_id = str(row.get("action_id", "")).strip()
+                if not action_id:
+                    raise ValueError("every evaluation result requires action_id")
+                yield {
+                    "action_id": action_id,
+                    "action": str(row.get("action", "")).strip(),
+                    "status": _canonical_status(row.get("status", "")),
+                }
+        return
+
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    rows = payload.get("results")
+    if not isinstance(rows, list):
+        raise ValueError("evaluation JSON must contain a results array")
+    for row in rows:
+        action_id = str(row.get("action_id", "")).strip()
+        if not action_id:
+            raise ValueError("every evaluation result requires action_id")
+        yield {
+            "action_id": action_id,
+            "action": str(row.get("action", "")).strip(),
+            "status": _canonical_status(row.get("status", "")),
+        }
+
+
+_PARITY_PARTITION_COUNT = 64
+
+
+def _parity_partition(action_id: str, partition_count: int) -> int:
+    prefix = action_id[:8]
+    try:
+        value = int(prefix, 16)
+    except ValueError:
+        value = int.from_bytes(
+            hashlib.blake2s(action_id.encode("utf-8"), digest_size=4).digest(),
+            "big",
+        )
+    return value % partition_count
+
+
+def _write_parity_partitions(
+    source: Path,
+    root: Path,
+    prefix: str,
+    *,
+    partition_count: int,
+) -> tuple[int, list[Path]]:
+    paths = [root / f"{prefix}-{index:02d}.tsv" for index in range(partition_count)]
+    handles = [path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths]
+    writers = [csv.writer(handle, delimiter="\t", lineterminator="\n") for handle in handles]
+    count = 0
+    try:
+        for row in _iter_result_rows(source):
+            partition = _parity_partition(row["action_id"], partition_count)
+            writers[partition].writerow((row["action_id"], row["action"], row["status"]))
+            count += 1
+    finally:
+        for handle in handles:
+            handle.close()
+    for path in paths:
+        restrict_file(path)
+    return count, paths
+
+
+def _iter_parity_partition(path: Path) -> Iterator[tuple[str, str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        for row in reader:
+            if len(row) != 3 or not row[0]:
+                raise ValueError(f"invalid parity partition row: {path.name}")
+            yield row[0], row[1], row[2]
+
+
+def compare_evaluators_streaming(
+    internal_file: str | Path,
+    official_file: str | Path,
+    output_file: str | Path,
+    *,
+    discrepancy_limit: int = 10_000,
+) -> dict[str, Any]:
+    """Compare large action-level CSV/JSON evaluator outputs with bounded memory."""
+    if discrepancy_limit < 0:
+        raise ValueError("discrepancy_limit must be non-negative")
+    internal_path, official_path = Path(internal_file), Path(official_file)
+    destination = Path(output_file)
+    destination.parent.mkdir(parents=True, exist_ok=True)
+
+    temp_root = Path(
+        tempfile.mkdtemp(
+            prefix=f".{destination.stem}.",
+            suffix=".parts",
+            dir=destination.parent,
+        )
+    )
+    restrict_directory(temp_root)
+    discrepancies: list[dict[str, Any]] = []
+    discrepancy_count = 0
+    confusion: Counter[str] = Counter()
+    matched = 0
+
+    try:
+        official_count, official_partitions = _write_parity_partitions(
+            official_path,
+            temp_root,
+            "official",
+            partition_count=_PARITY_PARTITION_COUNT,
+        )
+        internal_count, internal_partitions = _write_parity_partitions(
+            internal_path,
+            temp_root,
+            "internal",
+            partition_count=_PARITY_PARTITION_COUNT,
+        )
+
+        for official_partition, internal_partition in zip(
+            official_partitions,
+            internal_partitions,
+            strict=True,
+        ):
+            official_rows: dict[str, tuple[str, str]] = {}
+            for action_id, action, status in _iter_parity_partition(official_partition):
+                if action_id in official_rows:
+                    raise ValueError(f"duplicate official action_id: {action_id}")
+                official_rows[action_id] = (action, status)
+
+            internal_seen: set[str] = set()
+            for action_id, internal_action, lstatus in _iter_parity_partition(internal_partition):
+                if action_id in internal_seen:
+                    raise ValueError(f"duplicate internal action_id: {action_id}")
+                internal_seen.add(action_id)
+                official_row = official_rows.pop(action_id, None)
+                if official_row is None:
+                    rstatus = "missing"
+                    action = internal_action
+                else:
+                    action = internal_action or official_row[0] or ""
+                    rstatus = official_row[1]
+                confusion[f"{lstatus}|{rstatus}"] += 1
+                if lstatus == rstatus:
+                    matched += 1
+                else:
+                    discrepancy_count += 1
+                    if len(discrepancies) < discrepancy_limit:
+                        discrepancies.append(
+                            {
+                                "action_id": action_id,
+                                "action": action,
+                                "internal_status": lstatus,
+                                "official_status": rstatus,
+                            }
+                        )
+
+            for action_id in sorted(official_rows):
+                action, status = official_rows[action_id]
+                confusion[f"missing|{status}"] += 1
+                discrepancy_count += 1
+                if len(discrepancies) < discrepancy_limit:
+                    discrepancies.append(
+                        {
+                            "action_id": action_id,
+                            "action": action,
+                            "internal_status": "missing",
+                            "official_status": status,
+                        }
+                    )
+
+        union_count = matched + discrepancy_count
+        result = {
+            "schema_version": "1.0",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "internal_sha256": _sha256(internal_path),
+            "official_sha256": _sha256(official_path),
+            "internal_row_count": internal_count,
+            "official_row_count": official_count,
+            "union_action_count": union_count,
+            "exact_status_matches": matched,
+            "exact_status_agreement": matched / union_count if union_count else None,
+            "confusion": dict(sorted(confusion.items())),
+            "discrepancy_count": discrepancy_count,
+            "discrepancy_sample_limit": discrepancy_limit,
+            "discrepancies_truncated": discrepancy_count > len(discrepancies),
+            "discrepancies": discrepancies,
+            "join_strategy": "bounded_hash_partitions",
+            "partition_count": _PARITY_PARTITION_COUNT,
+        }
+        atomic_write_text(destination, json.dumps(result, indent=2, sort_keys=True) + "\n")
+        restrict_file(destination)
+        return result
+    finally:
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def build_evidence_package(

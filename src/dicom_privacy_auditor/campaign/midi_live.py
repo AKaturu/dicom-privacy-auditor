@@ -18,7 +18,7 @@ import pydicom
 from .. import __version__
 from ..adapters.factory import create_adapter
 from ..benchmark.manifest import _validated_relative_path
-from ..benchmark.midi import evaluate_midi
+from ..benchmark.midi import evaluate_midi, pixel_bboxes_by_source_path
 from ..deidentify import UIDMapper, baseline_deidentify_file
 from ..jsonio import validate_payload, write_json
 
@@ -348,6 +348,10 @@ def run_tool(
     configuration_sha256 = _json_sha256(normalized_config)
     source_manifest_sha256 = _file_sha256(manifest_path)
     mapper = UIDMapper(salt=f"DPA-MIDI-{tool}")
+    pixel_bboxes: dict[str, list[tuple[int, int, int, int]]] = {}
+    if tool == "baseline":
+        actions_path = (imported / _validated_relative_path(manifest["actions_file"])).resolve()
+        pixel_bboxes = pixel_bboxes_by_source_path(actions_path)
     adapter = create_adapter(tool, normalized_config) if tool not in {"baseline", "noop"} else None
     try:
         probe = adapter.probe() if adapter is not None else {"status": "builtin", "tool": tool}
@@ -389,7 +393,12 @@ def run_tool(
             destination.parent.mkdir(parents=True, exist_ok=True)
             try:
                 if tool == "baseline":
-                    baseline_deidentify_file(source, destination, uid_mapper=mapper)
+                    baseline_deidentify_file(
+                        source,
+                        destination,
+                        uid_mapper=mapper,
+                        pixel_bboxes=pixel_bboxes.get(relative.as_posix(), []),
+                    )
                 elif tool == "noop":
                     shutil.copy2(source, destination)
                 else:

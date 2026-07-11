@@ -108,7 +108,57 @@ dicom-privacy-campaign review-sample \
   --failures-per-stratum 25 --controls-per-stratum 10 --seed 20260620
 ```
 
-Normalize the official validator output to the same `results` array shape (`action_id`, `action`, and `status`), then calculate evaluator parity:
+Normalize the official validator SQLite output into the same action-id namespace as
+the internal evaluator, then calculate evaluator parity:
+
+```bash
+dicom-privacy-campaign normalize-official-midi \
+  workspaces/midi-live/official/orthanc/validation_results.db \
+  private/MIDI-B-Answer-Key-Validation.db \
+  workspaces/midi-live/imported/uid_mapping.csv \
+  workspaces/midi-live/official/orthanc-normalized.csv \
+  --unmatched-output workspaces/midi-live/official/orthanc-unmatched.csv
+
+dicom-privacy-campaign parity-stream \
+  workspaces/midi-live/evaluations/orthanc/midi_results.csv \
+  workspaces/midi-live/official/orthanc-normalized.csv \
+  workspaces/midi-live/reports/orthanc-parity.json
+```
+
+If parity is not exact, generate an aggregate disagreement review before making
+performance claims. The review summarizes action, category, reason, and
+status-direction clusters without exporting raw answer values or DICOM paths:
+
+```bash
+dicom-privacy-campaign review-disagreements \
+  workspaces/midi-live/evaluations/orthanc/midi_results.csv \
+  workspaces/midi-live/official/orthanc-normalized.csv \
+  workspaces/midi-live/reports/orthanc-disagreement-review.json \
+  --report-markdown workspaces/midi-live/reports/ORTHANC_DISAGREEMENT_REVIEW.md \
+  --top-n 30
+```
+
+For private local reviewer work, add `--actions-jsonl imported/actions.jsonl`
+to enrich the report with aggregate tag-name clusters. Do not publish raw action
+ledgers, answer values, source paths, or candidate DICOM outputs.
+
+After the aggregate review, adjudicate the disagreement families before using
+the results in manuscripts or public performance claims:
+
+```bash
+dicom-privacy-campaign adjudicate-disagreements \
+  workspaces/midi-live/reports/orthanc-disagreement-review.json \
+  workspaces/midi-live/reports/orthanc-disagreement-adjudication.json \
+  --report-markdown workspaces/midi-live/reports/ORTHANC_DISAGREEMENT_ADJUDICATION.md
+```
+
+The adjudication report classifies date/UID presence-policy, text-tokenization,
+tag-null, and pixel-comparison disagreements. Treat the official-compatible
+validator score as the primary MIDI-B benchmark score and the internal strict
+score as a sensitivity analysis unless sampled reviewer signoff supports a
+stronger semantic interpretation.
+
+For smaller JSON-only experiments, the legacy in-memory comparator is still available:
 
 ```bash
 dicom-privacy-campaign parity \

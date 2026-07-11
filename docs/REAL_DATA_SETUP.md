@@ -72,7 +72,12 @@ Create a local config from `configs/external-validation.example.json`, then poin
 {
   "midi_b_corpus": "/secure/dicom-privacy-data/midi-b/source-dicom",
   "midi_b_answer_key": "/secure/dicom-privacy-data/midi-b/answer-keys/answer_key.sqlite",
+  "midi_b_uid_mapping": "/secure/dicom-privacy-data/midi-b/mappings/uid_mapping.csv",
+  "midi_b_patient_mapping": "/secure/dicom-privacy-data/midi-b/mappings/patient_mapping.csv",
   "official_validator_command": "/secure/dicom-privacy-data/tools/midi-validation-script/run-validator",
+  "official_validator_output_dir": "/secure/dicom-privacy-data/midi-b/official-validator",
+  "official_validator_log_dir": "/secure/dicom-privacy-data/midi-b/official-validator-logs",
+  "official_validator_run_name": "baseline-validation-run",
   "rsna_anonymizer_command": "/secure/dicom-privacy-data/tools/rsna-anonymizer/run-anonymizer",
   "rsna_ctp_command": "/secure/dicom-privacy-data/tools/rsna-ctp/run-ctp",
   "orthanc_http_url": "http://127.0.0.1:8042/system",
@@ -93,6 +98,12 @@ dicom-privacy-external local-external-validation.json \
 ```
 
 Use `--redact-paths` for public summaries.
+
+If the official MIDI-B validator has already been started, the same preflight result includes an
+`official_validator_monitor` block when `official_validator_output_dir`,
+`official_validator_log_dir`, and `official_validator_run_name` are configured. The monitor reports
+whether a run is `completed`, `failed`, `running`, `stale`, or `not_started` without copying answer
+keys, raw DICOM objects, or local paths into public reports.
 
 ## What May Be Committed
 
