@@ -58,10 +58,12 @@ def test_dicomweb_repeated_page_and_malformed_multipart(monkeypatch: pytest.Monk
     class Response:
         ok = True
         status_code = 200
-        headers: dict[str, str] = {}
         content = b""
 
-        def json(self):
+        def __init__(self) -> None:
+            self.headers: dict[str, str] = {}
+
+        def json(self) -> list[dict[str, int]]:
             return [{"id": 1}]
 
     monkeypatch.setattr(client, "_request", lambda *_args, **_kwargs: Response())

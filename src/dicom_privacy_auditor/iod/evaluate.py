@@ -19,7 +19,7 @@ def tag_path_index(dataset: Dataset) -> dict[str, Any]:
             current = (*prefix, tag)
             output["/".join(current)] = element
             if element.VR == "SQ":
-                for item in element.value:
+                for item in element.value or ():
                     walk(item, current)
 
     walk(dataset)

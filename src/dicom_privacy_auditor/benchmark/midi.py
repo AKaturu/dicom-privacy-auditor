@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -25,6 +26,8 @@ from pydicom.tag import BaseTag, Tag
 from ..jsonio import validate_payload, write_json
 from ..permissions import restrict_file
 from .manifest import _validated_case_id, _validated_relative_path
+
+logger = logging.getLogger(__name__)
 
 MIDI_ACTIONS = {
     "date shifted",
@@ -484,6 +487,7 @@ def _scan_dicom_index(root: Path) -> tuple[dict[str, str], dict[str, str]]:
                     resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
                 )
         except Exception:
+            logger.debug("Skipping unreadable source candidate %s", resolved, exc_info=True)
             continue
         relative = path.relative_to(root).as_posix()
         if getattr(ds, "SOPInstanceUID", None):
@@ -894,6 +898,7 @@ def _candidate_index(root: Path) -> tuple[dict[str, Path], dict[str, list[Path]]
                     resolved, stop_before_pixels=True, specific_tags=["SOPInstanceUID", "PatientID"]
                 )
         except Exception:
+            logger.debug("Skipping unreadable output candidate %s", resolved, exc_info=True)
             continue
         if getattr(ds, "SOPInstanceUID", None):
             by_uid[str(ds.SOPInstanceUID)] = path

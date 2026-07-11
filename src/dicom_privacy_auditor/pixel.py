@@ -15,12 +15,15 @@ class PixelScanResult:
     reason: str | None = None
 
 
-def _normalize_frame(array: np.ndarray) -> np.ndarray:
+def _normalize_frame(array: np.ndarray, *, samples_per_pixel: int = 1) -> np.ndarray:
     frame = np.asarray(array)
-    if frame.ndim == 3 and frame.shape[-1] in {3, 4}:
-        frame = frame[..., :3].mean(axis=-1)
-    elif frame.ndim > 2:
+    is_color = samples_per_pixel > 1 and frame.ndim >= 3 and frame.shape[-1] in {3, 4}
+    if is_color and frame.ndim > 3:
+        frame = frame.reshape((-1, *frame.shape[-3:]))[0]
+    elif not is_color and frame.ndim > 2:
         frame = frame.reshape((-1, *frame.shape[-2:]))[0]
+    if is_color:
+        frame = frame[..., :3].mean(axis=-1)
     frame = frame.astype(np.float32)
     finite = np.isfinite(frame)
     if not finite.any():
@@ -42,7 +45,8 @@ def scan_text_like_border(dataset: Dataset) -> PixelScanResult:
     if "PixelData" not in dataset:
         return PixelScanResult(False, False, 0.0, reason="No PixelData")
     try:
-        image = _normalize_frame(dataset.pixel_array)
+        samples_per_pixel = int(getattr(dataset, "SamplesPerPixel", 1) or 1)
+        image = _normalize_frame(dataset.pixel_array, samples_per_pixel=samples_per_pixel)
     except Exception as exc:  # compressed transfer syntax or malformed pixel module
         return PixelScanResult(False, False, 0.0, reason=f"Pixel decoding failed: {type(exc).__name__}")
 

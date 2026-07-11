@@ -3,7 +3,10 @@ from __future__ import annotations
 import json
 import os
 
+import numpy as np
 import pytest
+from pydicom.dataset import FileDataset, FileMetaDataset
+from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
 ATTRIBUTE_OPTIONS = [
     "retain_safe_private",
@@ -17,6 +20,37 @@ ATTRIBUTE_OPTIONS = [
     "clean_structured_content",
     "clean_graphics",
 ]
+
+
+@pytest.fixture
+def review_dicom_writer():
+    def write(path, *, patient="SOURCE", pixels=None):
+        pixel_array = np.asarray(
+            pixels if pixels is not None else [[0, 1], [2, 3]],
+            dtype=np.uint16,
+        )
+        metadata = FileMetaDataset()
+        metadata.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
+        metadata.MediaStorageSOPInstanceUID = generate_uid()
+        metadata.TransferSyntaxUID = ExplicitVRLittleEndian
+        dataset = FileDataset(str(path), {}, file_meta=metadata, preamble=b"\0" * 128)
+        dataset.SOPClassUID = SecondaryCaptureImageStorage
+        dataset.SOPInstanceUID = metadata.MediaStorageSOPInstanceUID
+        dataset.StudyInstanceUID = generate_uid()
+        dataset.SeriesInstanceUID = generate_uid()
+        dataset.PatientID = patient
+        dataset.Modality = "OT"
+        dataset.Rows, dataset.Columns = pixel_array.shape
+        dataset.SamplesPerPixel = 1
+        dataset.PhotometricInterpretation = "MONOCHROME2"
+        dataset.BitsAllocated = 16
+        dataset.BitsStored = 16
+        dataset.HighBit = 15
+        dataset.PixelRepresentation = 0
+        dataset.PixelData = pixel_array.tobytes()
+        dataset.save_as(path, enforce_file_format=True)
+
+    return write
 
 
 def _attribute(name: str, tag: str, tag_hex: str | None, basic: str, **overrides: str):

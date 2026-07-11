@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import re
 import shutil
@@ -17,6 +18,8 @@ from .. import __version__
 from ..adapters.factory import create_adapter
 from ..deidentify import UIDMapper, baseline_deidentify_file
 from ..jsonio import validate_payload, write_json
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -103,6 +106,7 @@ def index_studies(root: str | Path) -> dict[str, list[Path]]:
         try:
             ds = pydicom.dcmread(resolved, stop_before_pixels=True)
         except Exception:
+            logger.debug("Skipping unreadable study candidate %s", resolved, exc_info=True)
             continue
         uid = str(getattr(ds, "StudyInstanceUID", ""))
         if uid:

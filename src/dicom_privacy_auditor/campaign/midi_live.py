@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import os
 import platform
 import shutil
@@ -23,6 +24,8 @@ from ..deidentify import UIDMapper, baseline_deidentify_file
 from ..jsonio import validate_payload, write_json
 
 DEFAULT_OFFICIAL_VALIDATOR_TIMEOUT_SECONDS = 3600.0
+
+logger = logging.getLogger(__name__)
 CAMPAIGN_TOOLS = {"noop", "baseline", "orthanc", "rsna-anonymizer", "rsna-ctp", "directory"}
 
 
@@ -137,6 +140,7 @@ def _dicom_files(root: Path) -> list[Path]:
         try:
             pydicom.dcmread(resolved, stop_before_pixels=True)
         except Exception:
+            logger.debug("Skipping unreadable campaign candidate %s", resolved, exc_info=True)
             continue
         output.append(resolved)
     return output
