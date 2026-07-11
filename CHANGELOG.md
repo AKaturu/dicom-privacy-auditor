@@ -2,10 +2,12 @@
 
 ## Unreleased
 
+- Constrained UI/dev installs below PyArrow 25 after its Linux Streamlit conversion path caused
+  native crashes on Python 3.10-3.12.
 - Clarified pixel-bound normalization, logged skipped malformed DICOM candidates, and hardened
   mutable/regex test fixtures found by expanded linting.
 - Added a distribution-metadata contract test to prevent package-version drift.
-- Refreshed the README with the current 193-test, 7-skip, and 85.55% coverage result.
+- Refreshed the README with the current 193-test, 7-skip, and 85.51% coverage result.
 - Made IOD indexing and review metadata comparisons tolerate empty DICOM sequence values.
 - Corrected multi-frame color pixel normalization and expanded scanner coverage across decoding,
   image-shape, border-localization, and similarity edge cases.
