@@ -17,7 +17,7 @@ A reproducible DICOM privacy-risk auditor and synthetic benchmark for evaluating
 
 | Evidence | Status |
 |---|---|
-| Unit and integration tests | Passed (163 passed, 7 skipped, 85.77% coverage) |
+| Unit and integration tests | Passed (192 passed, 7 skipped, 85.55% coverage) |
 | Synthetic end-to-end evaluation | Complete |
 | Public-data evaluation | Partial (7 of 10 external preflight checks ready) |
 | Independent expert review | Not completed |
