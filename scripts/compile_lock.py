@@ -51,6 +51,12 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--output", type=Path, required=True)
     parser.add_argument("--python-version", default="3.13")
     parser.add_argument("--python-platform", default="x86_64-manylinux_2_28")
+    parser.add_argument(
+        "--upgrade-package",
+        action="append",
+        default=[],
+        help="Upgrade only the named package while preserving other pins from the existing lock.",
+    )
     args = parser.parse_args(argv)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory(prefix="dpa-lock-") as raw:
@@ -71,6 +77,16 @@ def main(argv: list[str] | None = None) -> int:
             "--output-file",
             str(generated),
         ]
+        if args.upgrade_package:
+            if not args.output.exists():
+                print(
+                    "--upgrade-package requires an existing output lock to preserve other pins.",
+                    file=sys.stderr,
+                )
+                return 2
+            generated.write_text(args.output.read_text(encoding="utf-8"), encoding="utf-8")
+            for package in args.upgrade_package:
+                command.extend(["--upgrade-package", package])
         try:
             completed = subprocess.run(command, check=False)
         except FileNotFoundError:
