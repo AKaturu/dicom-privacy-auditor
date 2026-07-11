@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Clarified pixel-bound normalization, logged skipped malformed DICOM candidates, and hardened
+  mutable/regex test fixtures found by expanded linting.
 - Added a distribution-metadata contract test to prevent package-version drift.
 - Refreshed the README with the current 193-test, 7-skip, and 85.55% coverage result.
 - Made IOD indexing and review metadata comparisons tolerate empty DICOM sequence values.

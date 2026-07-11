@@ -127,7 +127,7 @@ def test_iod_registry_rejects_unsafe_edition_and_ambiguous_zip(tmp_path):
     _source_bundle(bundle)
     with zipfile.ZipFile(bundle, "a") as archive:
         archive.writestr("other/ciods.json", "[]")
-    with pytest.raises(ValueError, match="copies of ciods.json"):
+    with pytest.raises(ValueError, match=r"copies of ciods\.json"):
         prepare_registry(bundle, edition="fixture", output=tmp_path / "cache")
 
 

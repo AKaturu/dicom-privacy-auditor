@@ -129,9 +129,9 @@ def _clean_pixel_regions(
             f"Only single-frame 2D benchmark pixel cleaning is supported; shape={pixels.shape}"
         )
         return
-    for x1, y1, x2, y2 in bboxes:
-        x1, y1 = max(0, int(x1)), max(0, int(y1))
-        x2, y2 = min(pixels.shape[1], int(x2)), min(pixels.shape[0], int(y2))
+    for raw_x1, raw_y1, raw_x2, raw_y2 in bboxes:
+        x1, y1 = max(0, int(raw_x1)), max(0, int(raw_y1))
+        x2, y2 = min(pixels.shape[1], int(raw_x2)), min(pixels.shape[0], int(raw_y2))
         if x2 <= x1 or y2 <= y1:
             continue
         # Estimate the background from a border that excludes the text-bearing box.

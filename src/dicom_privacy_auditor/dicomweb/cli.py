@@ -2,11 +2,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 from pathlib import Path
 
 import pydicom
 
 from .client import DicomwebClient, DicomwebConfig
+
+logger = logging.getLogger(__name__)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -63,6 +66,7 @@ def main(argv: list[str] | None = None) -> int:
                 try:
                     pydicom.dcmread(path, stop_before_pixels=True)
                 except Exception:
+                    logger.debug("Skipping unreadable storage candidate %s", path, exc_info=True)
                     continue
                 paths.append(path)
             output_payload = client.store_instances(paths, study_uid=args.study_uid)
