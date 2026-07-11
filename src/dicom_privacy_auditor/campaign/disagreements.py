@@ -2,14 +2,16 @@ from __future__ import annotations
 
 import csv
 import json
+import shutil
+import tempfile
 from collections import Counter
 from collections.abc import Iterator
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from ..permissions import atomic_write_text, restrict_file
-from .evidence import _canonical_status, _sha256
+from ..permissions import atomic_write_text, restrict_directory, restrict_file
+from .evidence import _PARITY_PARTITION_COUNT, _canonical_status, _parity_partition, _sha256
 
 
 def _label(value: Any, *, blank: str = "<blank>") -> str:
@@ -35,6 +37,42 @@ def _iter_result_csv(path: Path, *, label: str) -> Iterator[dict[str, str]]:
                 "source_present": _label(row.get("source_present")),
                 "candidate_present": _label(row.get("candidate_present")),
             }
+
+
+def _write_disagreement_partitions(
+    source: Path,
+    root: Path,
+    prefix: str,
+    *,
+    label: str,
+    fields: tuple[str, ...],
+) -> tuple[int, list[Path]]:
+    paths = [root / f"{prefix}-{index:02d}.tsv" for index in range(_PARITY_PARTITION_COUNT)]
+    handles = [
+        path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths
+    ]
+    writers = [csv.writer(handle, delimiter="\t", lineterminator="\n") for handle in handles]
+    count = 0
+    try:
+        for row in _iter_result_csv(source, label=label):
+            partition = _parity_partition(row["action_id"], _PARITY_PARTITION_COUNT)
+            writers[partition].writerow(row[field] for field in fields)
+            count += 1
+    finally:
+        for handle in handles:
+            handle.close()
+    for path in paths:
+        restrict_file(path)
+    return count, paths
+
+
+def _iter_disagreement_partition(path: Path, field_count: int) -> Iterator[list[str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        for row in reader:
+            if len(row) != field_count or not row[0]:
+                raise ValueError(f"invalid disagreement partition row: {path.name}")
+            yield row
 
 
 def _top(counter: Counter[tuple[str, ...]], fields: tuple[str, ...], *, limit: int) -> list[dict[str, Any]]:
@@ -183,6 +221,24 @@ def _adjudicate_action_cluster(action: str, internal_status: str, official_statu
             next_step="Manually spot-review the five hidden-pixel cases before making semantic image-redaction claims.",
             publication_treatment="Use official status for benchmark scoring; flag as manual-review priority.",
         )
+    if key == ("text removed", "pass", "fail"):
+        return _rule(
+            family="text_tokenization_policy",
+            disposition="official_token_residual_internal_literal_pass",
+            confidence="medium_high",
+            basis=(
+                "The internal comparator confirms removal of the exact answer literal, while the "
+                "official-compatible token policy can still fail when material answer tokens remain."
+            ),
+            next_step=(
+                "Use governed recursive DICOM review to reproduce the tokenized result and retain "
+                "independent human signoff for semantic publication claims."
+            ),
+            publication_treatment=(
+                "Use the official-compatible failure for benchmark scoring; do not reinterpret exact-literal "
+                "removal as semantic clearance."
+            ),
+        )
     if action in {"text retained", "text removed"}:
         if internal_status == "fail" and official_status == "pass":
             return _rule(
@@ -271,6 +327,18 @@ def _adjudicate_category_cluster(category: str, internal_status: str, official_s
             publication_treatment="Report as comparator-policy mismatch pending sampled review.",
         )
     if category in {"person_name", "patient_name", "description", "patient_address;comment"}:
+        if internal_status == "pass" and official_status == "fail":
+            return _rule(
+                family="text_phi_tokenization_policy",
+                disposition="official_token_residual_internal_literal_pass",
+                confidence="medium_high",
+                basis=(
+                    "Exact-literal removal and tokenized residual-text checks disagree in this text-bearing "
+                    "category; the latter is the benchmark-compatible semantic screen."
+                ),
+                next_step="Confirm the residual-token result under governed DICOM review and seek human signoff.",
+                publication_treatment="Count as an official-compatible benchmark failure.",
+            )
         return _rule(
             family="text_phi_tokenization_policy",
             disposition="text_matching_policy_mismatch",
@@ -317,6 +385,28 @@ def _render_adjudication_markdown(payload: dict[str, Any]) -> str:
 
     summary = payload["summary"]
     confusion = payload["confusion_summary"]
+    action_rows = payload["action_adjudications"]
+    priorities = [
+        "Add an official-compatible evaluator profile for date, UID, tag, text, and pixel semantics.",
+        "Sample text-bearing PHI clusters before making semantic PHI-retention claims.",
+        "Sample null-marker and absent-element cases for tag presence/null disagreements.",
+    ]
+    pixel_hidden_rows = sum(row["count"] for row in action_rows if row["action"] == "pixels hidden")
+    if pixel_hidden_rows:
+        priorities.append(
+            f"Manually inspect the {pixel_hidden_rows} hidden-pixel disagreements because they are clinically visible."
+        )
+    residual_text_rows = sum(
+        row["count"]
+        for row in action_rows
+        if row["action"] == "text removed"
+        and row["internal_status"] == "pass"
+        and row["official_status"] == "fail"
+    )
+    if residual_text_rows:
+        priorities.append(
+            f"Obtain independent human signoff for the {residual_text_rows} exact-literal-pass/tokenized-fail text rows."
+        )
     lines = [
         "# MIDI-B Disagreement Category Adjudication",
         "",
@@ -358,10 +448,7 @@ def _render_adjudication_markdown(payload: dict[str, Any]) -> str:
         ),
         "## Reviewer Priorities",
         "",
-        "1. Add an official-compatible evaluator profile for date/UID/tag/text/pixel semantics.",
-        "2. Sample text-bearing PHI clusters before making semantic PHI-retention claims.",
-        "3. Sample null-marker and absent-element cases for tag presence/null disagreements.",
-        "4. Manually inspect the five hidden-pixel disagreements because they are small and clinically visible.",
+        *[f"{index}. {priority}" for index, priority in enumerate(priorities, start=1)],
         "",
     ]
     return "\n".join(lines)
@@ -478,13 +565,21 @@ def analyze_parity_disagreements(
     presence_counter: Counter[tuple[str, ...]] = Counter()
     confusion: Counter[tuple[str, ...]] = Counter()
     samples: list[dict[str, str]] = []
+    stratified_samples: dict[str, list[dict[str, str]]] = {}
     official_count = 0
     internal_count = 0
     exact_matches = 0
     disagreement_count = 0
     tag_enrichment: dict[str, Any] | None = None
-    official_by_id: dict[str, tuple[str, str]] = {}
     discrepant_by_id: dict[str, tuple[str, str, str]] = {}
+    temp_root = Path(
+        tempfile.mkdtemp(
+            prefix=f".{destination.stem}.",
+            suffix=".parts",
+            dir=destination.parent,
+        )
+    )
+    restrict_directory(temp_root)
 
     def record_disagreement(
         *,
@@ -505,91 +600,126 @@ def analyze_parity_disagreements(
         action_status_counter[(action, internal_status, official_status)] += 1
         category_status_counter[(category, internal_status, official_status)] += 1
         presence_counter[(source_present, candidate_present, internal_status, official_status)] += 1
-        if len(samples) < sample_limit:
-            samples.append(
-                {
-                    "action_id": action_id,
-                    "action": action,
-                    "category": category,
-                    "reason": reason,
-                    "internal_status": internal_status,
-                    "official_status": official_status,
-                }
-            )
-        discrepant_by_id[action_id] = (action, internal_status, official_status)
-
-    for row in _iter_result_csv(official_path, label="official"):
-        official_count += 1
-        if row["action_id"] in official_by_id:
-            raise ValueError(f"duplicate official action_id: {row['action_id']}")
-        official_by_id[row["action_id"]] = (row["action"], row["status"])
-
-    for row in _iter_result_csv(internal_path, label="internal"):
-        internal_count += 1
-        official_row = official_by_id.pop(row["action_id"], None)
-        internal_status = row["status"]
-        official_status = str(official_row[1]) if official_row else "missing"
-        confusion[(internal_status, official_status)] += 1
-        if internal_status == official_status:
-            exact_matches += 1
-            continue
-        record_disagreement(
-            action_id=row["action_id"],
-            action=row["action"] or (str(official_row[0]) if official_row else "<blank>"),
-            category=row["category"],
-            reason=row["reason"],
-            internal_status=internal_status,
-            official_status=official_status,
-            source_present=row["source_present"],
-            candidate_present=row["candidate_present"],
-        )
-
-    for action_id, (action, official_status) in official_by_id.items():
-        confusion[("missing", str(official_status))] += 1
-        record_disagreement(
-            action_id=str(action_id),
-            action=_label(action),
-            category="<missing internal>",
-            reason="internal row missing",
-            internal_status="missing",
-            official_status=str(official_status),
-            source_present="<missing internal>",
-            candidate_present="<missing internal>",
-        )
-    official_by_id.clear()
-
-    if actions_path:
-        tag_counter: Counter[tuple[str, ...]] = Counter()
-        action_tag_status_counter: Counter[tuple[str, ...]] = Counter()
-        actions_rows_scanned = 0
-        matched = 0
-        with actions_path.open(encoding="utf-8") as handle:
-            for line in handle:
-                actions_rows_scanned += 1
-                row = json.loads(line)
-                action_id = _label(row.get("action_id"), blank="")
-                if not action_id:
-                    continue
-                mismatch = discrepant_by_id.get(action_id)
-                if mismatch is None:
-                    continue
-                matched += 1
-                tag_name = _label(row.get("tag_name"))
-                tag_counter[(tag_name,)] += 1
-                action_tag_status_counter[(mismatch[0], tag_name, mismatch[1], mismatch[2])] += 1
-        tag_enrichment = {
-            "actions_sha256": _sha256(actions_path),
-            "actions_rows_scanned": actions_rows_scanned,
-            "matched_disagreement_actions": matched,
-            "top_tag_names": _top(tag_counter, ("tag_name",), limit=top_n),
-            "top_action_tag_status_disagreements": _top(
-                action_tag_status_counter,
-                ("action", "tag_name", "internal_status", "official_status"),
-                limit=top_n,
-            ),
+        sample = {
+            "action_id": action_id,
+            "action": action,
+            "category": category,
+            "reason": reason,
+            "internal_status": internal_status,
+            "official_status": official_status,
         }
+        if len(samples) < sample_limit:
+            samples.append(sample)
+        if sample_limit:
+            stratum = f"{internal_status}|{official_status}"
+            stratum_rows = stratified_samples.setdefault(stratum, [])
+            if len(stratum_rows) < sample_limit:
+                stratum_rows.append(sample)
+        if actions_path:
+            discrepant_by_id[action_id] = (action, internal_status, official_status)
 
     try:
+        official_count, official_partitions = _write_disagreement_partitions(
+            official_path,
+            temp_root,
+            "official",
+            label="official",
+            fields=("action_id", "action", "status"),
+        )
+        internal_count, internal_partitions = _write_disagreement_partitions(
+            internal_path,
+            temp_root,
+            "internal",
+            label="internal",
+            fields=(
+                "action_id",
+                "action",
+                "category",
+                "reason",
+                "status",
+                "source_present",
+                "candidate_present",
+            ),
+        )
+
+        for official_partition, internal_partition in zip(
+            official_partitions,
+            internal_partitions,
+            strict=True,
+        ):
+            official_by_id: dict[str, tuple[str, str]] = {}
+            for action_id, action, status in _iter_disagreement_partition(official_partition, 3):
+                if action_id in official_by_id:
+                    raise ValueError(f"duplicate official action_id: {action_id}")
+                official_by_id[action_id] = (action, status)
+
+            internal_seen: set[str] = set()
+            for row in _iter_disagreement_partition(internal_partition, 7):
+                action_id, action, category, reason, internal_status, source_present, candidate_present = row
+                if action_id in internal_seen:
+                    raise ValueError(f"duplicate internal action_id: {action_id}")
+                internal_seen.add(action_id)
+                official_row = official_by_id.pop(action_id, None)
+                official_status = official_row[1] if official_row else "missing"
+                confusion[(internal_status, official_status)] += 1
+                if internal_status == official_status:
+                    exact_matches += 1
+                    continue
+                record_disagreement(
+                    action_id=action_id,
+                    action=action or (official_row[0] if official_row else "<blank>"),
+                    category=category,
+                    reason=reason,
+                    internal_status=internal_status,
+                    official_status=official_status,
+                    source_present=source_present,
+                    candidate_present=candidate_present,
+                )
+
+            for action_id, (action, official_status) in official_by_id.items():
+                confusion[("missing", official_status)] += 1
+                record_disagreement(
+                    action_id=action_id,
+                    action=_label(action),
+                    category="<missing internal>",
+                    reason="internal row missing",
+                    internal_status="missing",
+                    official_status=official_status,
+                    source_present="<missing internal>",
+                    candidate_present="<missing internal>",
+                )
+
+        if actions_path:
+            tag_counter: Counter[tuple[str, ...]] = Counter()
+            action_tag_status_counter: Counter[tuple[str, ...]] = Counter()
+            actions_rows_scanned = 0
+            matched = 0
+            with actions_path.open(encoding="utf-8") as handle:
+                for line in handle:
+                    actions_rows_scanned += 1
+                    row = json.loads(line)
+                    action_id = _label(row.get("action_id"), blank="")
+                    if not action_id:
+                        continue
+                    mismatch = discrepant_by_id.get(action_id)
+                    if mismatch is None:
+                        continue
+                    matched += 1
+                    tag_name = _label(row.get("tag_name"))
+                    tag_counter[(tag_name,)] += 1
+                    action_tag_status_counter[(mismatch[0], tag_name, mismatch[1], mismatch[2])] += 1
+            tag_enrichment = {
+                "actions_sha256": _sha256(actions_path),
+                "actions_rows_scanned": actions_rows_scanned,
+                "matched_disagreement_actions": matched,
+                "top_tag_names": _top(tag_counter, ("tag_name",), limit=top_n),
+                "top_action_tag_status_disagreements": _top(
+                    action_tag_status_counter,
+                    ("action", "tag_name", "internal_status", "official_status"),
+                    limit=top_n,
+                ),
+            }
+
         union_count = exact_matches + disagreement_count
         payload: dict[str, Any] = {
             "schema_version": "1.0",
@@ -621,6 +751,9 @@ def analyze_parity_disagreements(
             ),
             "sample_limit": sample_limit,
             "sample_disagreements": samples,
+            "sample_disagreements_by_confusion": stratified_samples,
+            "join_strategy": "bounded_hash_partitions",
+            "partition_count": _PARITY_PARTITION_COUNT,
         }
         if tag_enrichment:
             payload["tag_enrichment"] = tag_enrichment
@@ -632,5 +765,5 @@ def analyze_parity_disagreements(
             restrict_file(report_path)
         return payload
     finally:
-        official_by_id.clear()
+        shutil.rmtree(temp_root, ignore_errors=True)
         discrepant_by_id.clear()

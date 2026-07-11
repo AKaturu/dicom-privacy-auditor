@@ -6,7 +6,6 @@ import json
 import os
 import random
 import shutil
-import sqlite3
 import tarfile
 import tempfile
 from collections import Counter, defaultdict
@@ -223,6 +222,56 @@ def _iter_result_rows(path: Path) -> Iterator[dict[str, str]]:
         }
 
 
+_PARITY_PARTITION_COUNT = 64
+
+
+def _parity_partition(action_id: str, partition_count: int) -> int:
+    prefix = action_id[:8]
+    try:
+        value = int(prefix, 16)
+    except ValueError:
+        value = int.from_bytes(
+            hashlib.blake2s(action_id.encode("utf-8"), digest_size=4).digest(),
+            "big",
+        )
+    return value % partition_count
+
+
+def _write_parity_partitions(
+    source: Path,
+    root: Path,
+    prefix: str,
+    *,
+    partition_count: int,
+) -> tuple[int, list[Path]]:
+    paths = [root / f"{prefix}-{index:02d}.tsv" for index in range(partition_count)]
+    handles = [
+        path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths
+    ]
+    writers = [csv.writer(handle, delimiter="\t", lineterminator="\n") for handle in handles]
+    count = 0
+    try:
+        for row in _iter_result_rows(source):
+            partition = _parity_partition(row["action_id"], partition_count)
+            writers[partition].writerow((row["action_id"], row["action"], row["status"]))
+            count += 1
+    finally:
+        for handle in handles:
+            handle.close()
+    for path in paths:
+        restrict_file(path)
+    return count, paths
+
+
+def _iter_parity_partition(path: Path) -> Iterator[tuple[str, str, str]]:
+    with path.open(newline="", encoding="utf-8") as handle:
+        reader = csv.reader(handle, delimiter="\t")
+        for row in reader:
+            if len(row) != 3 or not row[0]:
+                raise ValueError(f"invalid parity partition row: {path.name}")
+            yield row[0], row[1], row[2]
+
+
 def compare_evaluators_streaming(
     internal_file: str | Path,
     official_file: str | Path,
@@ -237,53 +286,56 @@ def compare_evaluators_streaming(
     destination = Path(output_file)
     destination.parent.mkdir(parents=True, exist_ok=True)
 
-    temp_handle = tempfile.NamedTemporaryFile(
-        prefix=f"{destination.stem}.", suffix=".sqlite", dir=destination.parent, delete=False
+    temp_root = Path(
+        tempfile.mkdtemp(
+            prefix=f".{destination.stem}.",
+            suffix=".parts",
+            dir=destination.parent,
+        )
     )
-    temp_path = Path(temp_handle.name)
-    temp_handle.close()
+    restrict_directory(temp_root)
     discrepancies: list[dict[str, Any]] = []
     discrepancy_count = 0
     confusion: Counter[str] = Counter()
-    internal_count = 0
-    official_count = 0
     matched = 0
-    db: sqlite3.Connection | None = None
 
     try:
-        with sqlite3.connect(temp_path) as db:
-            db.execute(
-                "CREATE TABLE official (action_id TEXT PRIMARY KEY, action TEXT, status TEXT NOT NULL, seen INTEGER NOT NULL DEFAULT 0)"
-            )
-            db.execute("CREATE TABLE internal_seen (action_id TEXT PRIMARY KEY)")
-            for row in _iter_result_rows(official_path):
-                official_count += 1
-                try:
-                    db.execute(
-                        "INSERT INTO official (action_id, action, status) VALUES (?, ?, ?)",
-                        (row["action_id"], row["action"], row["status"]),
-                    )
-                except sqlite3.IntegrityError as exc:
-                    raise ValueError(f"duplicate official action_id: {row['action_id']}") from exc
-            db.commit()
+        official_count, official_partitions = _write_parity_partitions(
+            official_path,
+            temp_root,
+            "official",
+            partition_count=_PARITY_PARTITION_COUNT,
+        )
+        internal_count, internal_partitions = _write_parity_partitions(
+            internal_path,
+            temp_root,
+            "internal",
+            partition_count=_PARITY_PARTITION_COUNT,
+        )
 
-            for row in _iter_result_rows(internal_path):
-                internal_count += 1
-                try:
-                    db.execute("INSERT INTO internal_seen (action_id) VALUES (?)", (row["action_id"],))
-                except sqlite3.IntegrityError as exc:
-                    raise ValueError(f"duplicate internal action_id: {row['action_id']}") from exc
-                official_row = db.execute(
-                    "SELECT action, status FROM official WHERE action_id = ?", (row["action_id"],)
-                ).fetchone()
+        for official_partition, internal_partition in zip(
+            official_partitions,
+            internal_partitions,
+            strict=True,
+        ):
+            official_rows: dict[str, tuple[str, str]] = {}
+            for action_id, action, status in _iter_parity_partition(official_partition):
+                if action_id in official_rows:
+                    raise ValueError(f"duplicate official action_id: {action_id}")
+                official_rows[action_id] = (action, status)
+
+            internal_seen: set[str] = set()
+            for action_id, internal_action, lstatus in _iter_parity_partition(internal_partition):
+                if action_id in internal_seen:
+                    raise ValueError(f"duplicate internal action_id: {action_id}")
+                internal_seen.add(action_id)
+                official_row = official_rows.pop(action_id, None)
                 if official_row is None:
                     rstatus = "missing"
-                    action = row["action"]
+                    action = internal_action
                 else:
-                    action = row["action"] or official_row[0] or ""
-                    rstatus = str(official_row[1])
-                    db.execute("UPDATE official SET seen = 1 WHERE action_id = ?", (row["action_id"],))
-                lstatus = row["status"]
+                    action = internal_action or official_row[0] or ""
+                    rstatus = official_row[1]
                 confusion[f"{lstatus}|{rstatus}"] += 1
                 if lstatus == rstatus:
                     matched += 1
@@ -292,18 +344,15 @@ def compare_evaluators_streaming(
                     if len(discrepancies) < discrepancy_limit:
                         discrepancies.append(
                             {
-                                "action_id": row["action_id"],
+                                "action_id": action_id,
                                 "action": action,
                                 "internal_status": lstatus,
                                 "official_status": rstatus,
                             }
                         )
-            db.commit()
 
-            missing_internal = db.execute(
-                "SELECT action_id, action, status FROM official WHERE seen = 0 ORDER BY action_id"
-            )
-            for action_id, action, status in missing_internal:
+            for action_id in sorted(official_rows):
+                action, status = official_rows[action_id]
                 confusion[f"missing|{status}"] += 1
                 discrepancy_count += 1
                 if len(discrepancies) < discrepancy_limit:
@@ -332,17 +381,14 @@ def compare_evaluators_streaming(
             "discrepancy_sample_limit": discrepancy_limit,
             "discrepancies_truncated": discrepancy_count > len(discrepancies),
             "discrepancies": discrepancies,
+            "join_strategy": "bounded_hash_partitions",
+            "partition_count": _PARITY_PARTITION_COUNT,
         }
         atomic_write_text(destination, json.dumps(result, indent=2, sort_keys=True) + "\n")
         restrict_file(destination)
         return result
     finally:
-        if db is not None:
-            db.close()
-        try:
-            temp_path.unlink()
-        except FileNotFoundError:
-            pass
+        shutil.rmtree(temp_root, ignore_errors=True)
 
 
 def build_evidence_package(

@@ -81,6 +81,8 @@ def test_streaming_parity_compares_csv_inputs_and_truncates_discrepancies(tmp_pa
     assert result["exact_status_matches"] == 1
     assert result["discrepancy_count"] == 3
     assert result["discrepancies_truncated"] is True
+    assert result["join_strategy"] == "bounded_hash_partitions"
+    assert result["partition_count"] == 64
     assert result["confusion"]["pass|pass"] == 1
     assert result["confusion"]["fail|pass"] == 1
     assert result["confusion"]["unresolved|missing"] == 1
@@ -95,6 +97,18 @@ def test_streaming_parity_rejects_duplicate_action_ids(tmp_path):
 
     with pytest.raises(ValueError, match="duplicate internal action_id"):
         compare_evaluators_streaming(left, right, tmp_path / "parity.json")
+
+
+def test_streaming_parity_rejects_duplicate_official_action_ids_and_cleans_partitions(tmp_path):
+    left = tmp_path / "internal.csv"
+    left.write_text("action_id,status\na,pass\n", encoding="utf-8")
+    right = tmp_path / "official.csv"
+    right.write_text("action_id,status\na,pass\na,fail\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate official action_id"):
+        compare_evaluators_streaming(left, right, tmp_path / "parity.json")
+
+    assert not list(tmp_path.glob(".parity.*.parts"))
 
 
 def test_normalize_official_midi_reconstructs_action_ids(tmp_path):
@@ -232,6 +246,8 @@ def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
     assert result["official_row_count"] == 5
     assert result["exact_status_matches"] == 1
     assert result["disagreement_count"] == 4
+    assert result["join_strategy"] == "bounded_hash_partitions"
+    assert result["partition_count"] == 64
     assert result["confusion"]["fail|pass"] == 1
     assert result["confusion"]["missing|pass"] == 1
     assert result["top_action_status_disagreements"][0]["count"] == 1
@@ -241,9 +257,30 @@ def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
         "Pixel Data",
     }
     assert len(result["sample_disagreements"]) == 2
+    assert set(result["sample_disagreements_by_confusion"]) == {
+        "fail|pass",
+        "missing|pass",
+        "pass|fail",
+        "unresolved|pass",
+    }
     assert (tmp_path / "review.md").read_text(encoding="utf-8").startswith(
         "# MIDI-B Parity Disagreement Review"
     )
+
+
+def test_analyze_parity_disagreements_rejects_duplicate_internal_ids_and_cleans_partitions(tmp_path):
+    internal = tmp_path / "internal.csv"
+    internal.write_text(
+        "action_id,action,status\na,text retained,pass\na,text retained,fail\n",
+        encoding="utf-8",
+    )
+    official = tmp_path / "official.csv"
+    official.write_text("action_id,action,status\na,text retained,pass\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="duplicate internal action_id"):
+        analyze_parity_disagreements(internal, official, tmp_path / "review.json")
+
+    assert not list(tmp_path.glob(".review.*.parts"))
 
 
 def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
@@ -252,11 +289,11 @@ def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
         json.dumps(
             {
                 "schema_version": "1.0",
-                "disagreement_count": 12,
+                "disagreement_count": 13,
                 "confusion": {
                     "fail|fail": 4,
                     "fail|pass": 7,
-                    "pass|fail": 2,
+                    "pass|fail": 3,
                     "pass|pass": 8,
                     "unresolved|pass": 1,
                 },
@@ -291,6 +328,12 @@ def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
                         "official_status": "fail",
                         "count": 1,
                     },
+                    {
+                        "action": "text removed",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
                 ],
                 "top_category_status_disagreements": [
                     {
@@ -317,6 +360,12 @@ def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
                         "official_status": "pass",
                         "count": 3,
                     },
+                    {
+                        "category": "patient_address;comment",
+                        "internal_status": "pass",
+                        "official_status": "fail",
+                        "count": 1,
+                    },
                 ],
             }
         ),
@@ -329,14 +378,15 @@ def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
         report_markdown=tmp_path / "ADJUDICATION.md",
     )
 
-    assert result["summary"]["action_cluster_rows"] == 12
+    assert result["summary"]["action_cluster_rows"] == 13
     assert result["summary"]["action_cluster_coverage"] == 1
     assert result["confusion_summary"]["official_pass"] == 16
-    assert result["confusion_summary"]["official_score"] == 16 / 22
+    assert result["confusion_summary"]["official_score"] == 16 / 23
     dispositions = {row["disposition"] for row in result["action_adjudications"]}
     assert "internal_strict_false_negative_relative_to_official" in dispositions
     assert "presence_or_null_representation_mismatch" in dispositions
     assert "manual_review_required" in dispositions
+    assert "official_token_residual_internal_literal_pass" in dispositions
     assert result["category_adjudications"][0]["family"] == "uid_presence_mapping_policy"
     assert (tmp_path / "ADJUDICATION.md").read_text(encoding="utf-8").startswith(
         "# MIDI-B Disagreement Category Adjudication"
