@@ -304,8 +304,9 @@ def _inspect_official_payloads(
     quoted_payload = payload_column.replace('"', '""')
     values: set[str] = set()
     rows_seen = 0
+    # SQLite cannot bind identifiers; these names come from the schema and are escaped above.
     for (payload,) in connection.execute(
-        f'SELECT "{quoted_payload}" FROM "{quoted_table}" WHERE "{quoted_payload}" IS NOT NULL LIMIT ?',
+        f'SELECT "{quoted_payload}" FROM "{quoted_table}" WHERE "{quoted_payload}" IS NOT NULL LIMIT ?',  # nosec B608
         (sample_rows,),
     ):
         rows_seen += 1
@@ -658,8 +659,9 @@ def import_midi(
                         sop_column = _find_column(table_info["columns"], ALIASES["sop_instance_uid"])
                         patient_column = _find_column(table_info["columns"], ALIASES["patient_id"])
                         payload_quoted = payload_column.replace('"', '""')
+                        # SQLite cannot bind identifiers; these names come from the schema and are escaped.
                         for row in connection.execute(
-                            f'SELECT rowid AS __rowid__, * FROM "{quoted}" WHERE "{payload_quoted}" IS NOT NULL'
+                            f'SELECT rowid AS __rowid__, * FROM "{quoted}" WHERE "{payload_quoted}" IS NOT NULL'  # nosec B608
                         ):
                             sop_uid = _row_text(row, sop_column)
                             patient_id = _row_text(row, patient_column)
