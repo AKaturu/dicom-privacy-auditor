@@ -194,7 +194,11 @@ def _iter_result_rows(path: Path) -> Iterator[dict[str, str]]:
     if path.suffix.lower() == ".csv":
         with path.open(newline="", encoding="utf-8") as handle:
             reader = csv.DictReader(handle)
-            if not reader.fieldnames or "action_id" not in reader.fieldnames or "status" not in reader.fieldnames:
+            if (
+                not reader.fieldnames
+                or "action_id" not in reader.fieldnames
+                or "status" not in reader.fieldnames
+            ):
                 raise ValueError("CSV evaluation input must contain action_id and status columns")
             for row in reader:
                 action_id = str(row.get("action_id", "")).strip()
@@ -245,9 +249,7 @@ def _write_parity_partitions(
     partition_count: int,
 ) -> tuple[int, list[Path]]:
     paths = [root / f"{prefix}-{index:02d}.tsv" for index in range(partition_count)]
-    handles = [
-        path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths
-    ]
+    handles = [path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths]
     writers = [csv.writer(handle, delimiter="\t", lineterminator="\n") for handle in handles]
     count = 0
     try:

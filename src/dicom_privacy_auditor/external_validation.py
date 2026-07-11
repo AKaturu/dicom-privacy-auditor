@@ -273,7 +273,9 @@ def run_preflight(config: dict[str, Any]) -> dict[str, Any]:
             "midi_b_corpus", config.get("midi_b_corpus"), directory=True, fingerprint_mode=fingerprint_mode
         ),
         _path_check("midi_b_answer_key", config.get("midi_b_answer_key"), fingerprint_mode=fingerprint_mode),
-        _path_check("midi_b_uid_mapping", config.get("midi_b_uid_mapping"), fingerprint_mode=fingerprint_mode),
+        _path_check(
+            "midi_b_uid_mapping", config.get("midi_b_uid_mapping"), fingerprint_mode=fingerprint_mode
+        ),
         _path_check(
             "midi_b_patient_mapping", config.get("midi_b_patient_mapping"), fingerprint_mode=fingerprint_mode
         ),

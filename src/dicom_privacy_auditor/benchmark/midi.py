@@ -63,9 +63,7 @@ ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 _CANONICAL_TAG_PATH_COMPONENT = re.compile(r"([0-9A-Fa-f]{8})(?:\[(\d+)\])?")
-_OFFICIAL_TAG_PATH_COMPONENT = re.compile(
-    r"\(([0-9A-Fa-f]{4}),\s*([0-9A-Fa-f]{4})\)(?:\[(\d+)\])?"
-)
+_OFFICIAL_TAG_PATH_COMPONENT = re.compile(r"\(([0-9A-Fa-f]{4}),\s*([0-9A-Fa-f]{4})\)(?:\[(\d+)\])?")
 
 
 def _canonical_tag_path(value: Any) -> str | None:
@@ -315,7 +313,9 @@ def _inspect_official_payloads(
             decoded = json.loads(payload)
         except (TypeError, json.JSONDecodeError):
             continue
-        entries = decoded.values() if isinstance(decoded, dict) else decoded if isinstance(decoded, list) else []
+        entries = (
+            decoded.values() if isinstance(decoded, dict) else decoded if isinstance(decoded, list) else []
+        )
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
@@ -395,7 +395,13 @@ def _column_map(columns: list[str], overrides: dict[str, str] | None = None) -> 
 
 def _parse_tag(value: Any, tag_name: str | None = None) -> str | None:
     if value not in (None, ""):
-        text = (_unwrap_answer_value(value) or "").replace("(", "").replace(")", "").replace(",", "").replace(" ", "")
+        text = (
+            (_unwrap_answer_value(value) or "")
+            .replace("(", "")
+            .replace(")", "")
+            .replace(",", "")
+            .replace(" ", "")
+        )
         if text.lower().startswith("0x"):
             text = text[2:]
         try:
@@ -1081,16 +1087,16 @@ def _evaluate_action(
     elif action.action == "text removed":
         needles = _expected_needles(action, source_values)
         passed = not needles or all(
-            needle not in candidate_value
-            for needle in needles
-            for candidate_value in candidate_values
+            needle not in candidate_value for needle in needles for candidate_value in candidate_values
         )
         reason = "specified text removed" if passed else "specified text remains"
     elif action.action == "text retained":
         needles = _expected_needles(action, source_values)
         passed = candidate_has and (
             not needles
-            or all(any(needle in candidate_value for candidate_value in candidate_values) for needle in needles)
+            or all(
+                any(needle in candidate_value for candidate_value in candidate_values) for needle in needles
+            )
         )
         reason = "specified text retained" if passed else "specified text is missing"
     elif action.action == "uid changed":
@@ -1353,8 +1359,7 @@ def evaluate_midi(
         f"- Unresolved: {summary['unresolved']}",
         f"- Errors: {summary['errors']}",
         f"- Results CSV: {results_csv_path.name}",
-        f"- Embedded JSON results: {len(results)}"
-        + (" (truncated)" if results_truncated else ""),
+        f"- Embedded JSON results: {len(results)}" + (" (truncated)" if results_truncated else ""),
         "",
         "| Action | Total | Passed | Failed | Unresolved | Score |",
         "|---|---:|---:|---:|---:|---:|",

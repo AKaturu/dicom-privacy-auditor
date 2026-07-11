@@ -478,9 +478,7 @@ def test_midi_import_accepts_official_answer_data_payload(tmp_path):
     assert actions[0].scope == "Instance"
     assert actions[0].tag_path == "00080012"
     assert actions[1].bbox_xyxy == (2, 3, 5, 7)
-    assert pixel_bboxes_by_source_path(imported / "actions.jsonl") == {
-        "case.dcm": [(2, 3, 5, 7)]
-    }
+    assert pixel_bboxes_by_source_path(imported / "actions.jsonl") == {"case.dcm": [(2, 3, 5, 7)]}
 
 
 def test_midi_evaluates_the_exact_official_sequence_path(tmp_path):
@@ -523,9 +521,7 @@ def test_midi_evaluates_the_exact_official_sequence_path(tmp_path):
     }
     db = tmp_path / "official.sqlite"
     with closing(sqlite3.connect(db)) as connection:
-        connection.execute(
-            "CREATE TABLE answer_data (PatientID TEXT, SOPInstanceUID TEXT, AnswerData TEXT)"
-        )
+        connection.execute("CREATE TABLE answer_data (PatientID TEXT, SOPInstanceUID TEXT, AnswerData TEXT)")
         connection.execute(
             "INSERT INTO answer_data VALUES (?, ?, ?)",
             ("P1", sop_uid, json.dumps(payload)),

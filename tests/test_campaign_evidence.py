@@ -58,18 +58,12 @@ def test_compare_evaluators_reports_discrepancies(tmp_path):
 def test_streaming_parity_compares_csv_inputs_and_truncates_discrepancies(tmp_path):
     left = tmp_path / "internal.csv"
     left.write_text(
-        "action_id,action,status\n"
-        "a,uid changed,pass\n"
-        "b,text removed,fail\n"
-        "c,tag retained,unresolved\n",
+        "action_id,action,status\na,uid changed,pass\nb,text removed,fail\nc,tag retained,unresolved\n",
         encoding="utf-8",
     )
     right = tmp_path / "official.csv"
     right.write_text(
-        "action_id,action,status\n"
-        "a,uid changed,True\n"
-        "b,text removed,pass\n"
-        "d,tag retained,False\n",
+        "action_id,action,status\na,uid changed,True\nb,text removed,pass\nd,tag retained,False\n",
         encoding="utf-8",
     )
 
@@ -184,9 +178,7 @@ def test_answer_payload_lookup_keeps_payloads_out_of_the_uid_index(tmp_path):
     answer_db = tmp_path / "answer.db"
     payload = {"0": {"action": "<text_retained>", "value": "<test>"}}
     with sqlite3.connect(answer_db) as connection:
-        connection.execute(
-            'CREATE TABLE answer_data ("index" INTEGER, SOPInstanceUID TEXT, AnswerData TEXT)'
-        )
+        connection.execute('CREATE TABLE answer_data ("index" INTEGER, SOPInstanceUID TEXT, AnswerData TEXT)')
         connection.execute('CREATE INDEX ix_answer_data_index ON answer_data ("index")')
         connection.execute(
             'INSERT INTO answer_data ("index", SOPInstanceUID, AnswerData) VALUES (?, ?, ?)',
@@ -226,9 +218,12 @@ def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
     )
     actions = tmp_path / "actions.jsonl"
     actions.write_text(
-        json.dumps({"action_id": "b", "tag_name": "Patient Name"}) + "\n"
-        + json.dumps({"action_id": "c", "tag_name": "Image Type"}) + "\n"
-        + json.dumps({"action_id": "d", "tag_name": "Pixel Data"}) + "\n",
+        json.dumps({"action_id": "b", "tag_name": "Patient Name"})
+        + "\n"
+        + json.dumps({"action_id": "c", "tag_name": "Image Type"})
+        + "\n"
+        + json.dumps({"action_id": "d", "tag_name": "Pixel Data"})
+        + "\n",
         encoding="utf-8",
     )
 
@@ -263,8 +258,8 @@ def test_analyze_parity_disagreements_summarizes_safe_clusters(tmp_path):
         "pass|fail",
         "unresolved|pass",
     }
-    assert (tmp_path / "review.md").read_text(encoding="utf-8").startswith(
-        "# MIDI-B Parity Disagreement Review"
+    assert (
+        (tmp_path / "review.md").read_text(encoding="utf-8").startswith("# MIDI-B Parity Disagreement Review")
     )
 
 
@@ -388,8 +383,10 @@ def test_adjudicate_parity_disagreements_classifies_safe_clusters(tmp_path):
     assert "manual_review_required" in dispositions
     assert "official_token_residual_internal_literal_pass" in dispositions
     assert result["category_adjudications"][0]["family"] == "uid_presence_mapping_policy"
-    assert (tmp_path / "ADJUDICATION.md").read_text(encoding="utf-8").startswith(
-        "# MIDI-B Disagreement Category Adjudication"
+    assert (
+        (tmp_path / "ADJUDICATION.md")
+        .read_text(encoding="utf-8")
+        .startswith("# MIDI-B Disagreement Category Adjudication")
     )
 
 

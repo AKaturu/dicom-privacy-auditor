@@ -48,9 +48,7 @@ def _write_disagreement_partitions(
     fields: tuple[str, ...],
 ) -> tuple[int, list[Path]]:
     paths = [root / f"{prefix}-{index:02d}.tsv" for index in range(_PARITY_PARTITION_COUNT)]
-    handles = [
-        path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths
-    ]
+    handles = [path.open("w", newline="", encoding="utf-8", buffering=1024 * 1024) for path in paths]
     writers = [csv.writer(handle, delimiter="\t", lineterminator="\n") for handle in handles]
     count = 0
     try:
@@ -91,10 +89,7 @@ def _render_markdown(payload: dict[str, Any]) -> str:
         header = "| " + " | ".join(fields + ["count"]) + " |"
         divider = "| " + " | ".join("---" for _ in fields + ["count"]) + " |"
         body = [
-            "| "
-            + " | ".join(str(row.get(field, "")) for field in fields + ["count"])
-            + " |"
-            for row in rows
+            "| " + " | ".join(str(row.get(field, "")) for field in fields + ["count"]) + " |" for row in rows
         ]
         return f"## {title}\n\n" + "\n".join([header, divider, *body]) + "\n"
 
@@ -439,7 +434,15 @@ def _render_adjudication_markdown(payload: dict[str, Any]) -> str:
         table(
             "Category Cluster Adjudication",
             payload["category_adjudications"],
-            ["category", "internal_status", "official_status", "count", "family", "disposition", "confidence"],
+            [
+                "category",
+                "internal_status",
+                "official_status",
+                "count",
+                "family",
+                "disposition",
+                "confidence",
+            ],
         ),
         table(
             "Disposition Summary",
@@ -508,10 +511,14 @@ def adjudicate_parity_disagreements(
             "total_disagreements": total_disagreements,
             "action_cluster_count": len(action_adjudications),
             "action_cluster_rows": action_cluster_rows,
-            "action_cluster_coverage": action_cluster_rows / total_disagreements if total_disagreements else None,
+            "action_cluster_coverage": action_cluster_rows / total_disagreements
+            if total_disagreements
+            else None,
             "category_cluster_count": len(category_adjudications),
             "category_cluster_rows": category_cluster_rows,
-            "category_cluster_coverage": category_cluster_rows / total_disagreements if total_disagreements else None,
+            "category_cluster_coverage": category_cluster_rows / total_disagreements
+            if total_disagreements
+            else None,
         },
         "confusion_summary": _confusion_summary(source_payload.get("confusion", {})),
         "disposition_summary": _top(disposition_counter, ("disposition",), limit=50),

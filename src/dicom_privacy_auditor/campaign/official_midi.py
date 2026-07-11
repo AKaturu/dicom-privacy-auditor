@@ -49,7 +49,7 @@ class _AnswerPayloadLookup:
         indexes = {row[1] for row in self.connection.execute("PRAGMA index_list(answer_data)")}
         if "ix_answer_data_index" in indexes:
             rows = self.connection.execute(
-                'SELECT rowid, SOPInstanceUID FROM answer_data '
+                "SELECT rowid, SOPInstanceUID FROM answer_data "
                 'INDEXED BY ix_answer_data_index ORDER BY "index"'
             )
             self.uid_scan_strategy = "ix_answer_data_index_ordered_scan"
