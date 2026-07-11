@@ -45,6 +45,7 @@ dev = [
   "wheel>=0.44,<1.0",
   "packaging>=24,<27",
   "PyYAML>=6.0,<7.0",
+  "streamlit>=1.36,<2.0",
 ]
 packaging = [
   "build>=1.2,<2.0",
@@ -139,6 +140,5 @@ ignore = ["E501"]
 
 [tool.coverage.run]
 omit = [
-  "src/dicom_privacy_auditor/review_app.py",
   "src/dicom_privacy_auditor/desktop.py",
 ]

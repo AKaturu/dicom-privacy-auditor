@@ -2,46 +2,18 @@ from __future__ import annotations
 
 import json
 
-import numpy as np
-from pydicom.dataset import FileDataset, FileMetaDataset
-from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
-
 from dicom_privacy_auditor.review.models import ReviewDecision
 from dicom_privacy_auditor.review.render import render_frame
 from dicom_privacy_auditor.review.store import ReviewStore, metadata_diff
 
 
-def _write(path, *, patient="SOURCE", pixels=None):
-    pixels = np.asarray(pixels if pixels is not None else [[0, 1], [2, 3]], dtype=np.uint16)
-    meta = FileMetaDataset()
-    meta.MediaStorageSOPClassUID = SecondaryCaptureImageStorage
-    meta.MediaStorageSOPInstanceUID = generate_uid()
-    meta.TransferSyntaxUID = ExplicitVRLittleEndian
-    ds = FileDataset(str(path), {}, file_meta=meta, preamble=b"\0" * 128)
-    ds.SOPClassUID = SecondaryCaptureImageStorage
-    ds.SOPInstanceUID = meta.MediaStorageSOPInstanceUID
-    ds.StudyInstanceUID = generate_uid()
-    ds.SeriesInstanceUID = generate_uid()
-    ds.PatientID = patient
-    ds.Modality = "OT"
-    ds.Rows, ds.Columns = pixels.shape
-    ds.SamplesPerPixel = 1
-    ds.PhotometricInterpretation = "MONOCHROME2"
-    ds.BitsAllocated = 16
-    ds.BitsStored = 16
-    ds.HighBit = 15
-    ds.PixelRepresentation = 0
-    ds.PixelData = pixels.tobytes()
-    ds.save_as(path, enforce_file_format=True)
-
-
-def test_review_store_decisions_export_and_agreement(tmp_path):
+def test_review_store_decisions_export_and_agreement(tmp_path, review_dicom_writer):
     source = tmp_path / "source"
     candidate = tmp_path / "candidate"
     source.mkdir()
     candidate.mkdir()
-    _write(source / "case.dcm", patient="PHI")
-    _write(candidate / "case.dcm", patient="")
+    review_dicom_writer(source / "case.dcm", patient="PHI")
+    review_dicom_writer(candidate / "case.dcm", patient="")
     database = tmp_path / "review.sqlite"
     store = ReviewStore(database)
     assert store.initialize(source, candidate) == 1
@@ -60,7 +32,7 @@ def test_review_store_decisions_export_and_agreement(tmp_path):
     assert payload["summary"]["cases"] == 1
 
 
-def test_review_disagreement_packet_integrity_and_permissions(tmp_path):
+def test_review_disagreement_packet_integrity_and_permissions(tmp_path, review_dicom_writer):
     import os
     import stat
 
@@ -70,8 +42,8 @@ def test_review_disagreement_packet_integrity_and_permissions(tmp_path):
     candidate = tmp_path / "candidate"
     source.mkdir()
     candidate.mkdir()
-    _write(source / "case.dcm", patient="PHI")
-    _write(candidate / "case.dcm", patient="")
+    review_dicom_writer(source / "case.dcm", patient="PHI")
+    review_dicom_writer(candidate / "case.dcm", patient="")
     database = tmp_path / "review.sqlite"
     store = ReviewStore(database)
     assert store.initialize(source, candidate) == 1
@@ -104,13 +76,13 @@ def test_review_disagreement_packet_integrity_and_permissions(tmp_path):
         assert stat.S_IMODE(output.stat().st_mode) == 0o600
 
 
-def test_agreement_uses_latest_decision_per_target(tmp_path):
+def test_agreement_uses_latest_decision_per_target(tmp_path, review_dicom_writer):
     source = tmp_path / "source"
     candidate = tmp_path / "candidate"
     source.mkdir()
     candidate.mkdir()
-    _write(source / "case.dcm")
-    _write(candidate / "case.dcm")
+    review_dicom_writer(source / "case.dcm")
+    review_dicom_writer(candidate / "case.dcm")
     store = ReviewStore(tmp_path / "review.sqlite")
     store.initialize(source, candidate)
     case_id = store.list_cases()[0].case_id
