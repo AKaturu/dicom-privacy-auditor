@@ -158,3 +158,17 @@ def test_review_store_does_not_create_missing_database(tmp_path):
     with pytest.raises(FileNotFoundError, match="does not exist"):
         store.list_cases()
     assert not database.exists()
+
+
+def test_metadata_diff_accepts_none_sequence_values(monkeypatch):
+    from pydicom.dataset import Dataset
+
+    dataset = Dataset()
+    dataset.add_new((0x0040, 0xA730), "SQ", [])
+    dataset[(0x0040, 0xA730)]._value = None
+    monkeypatch.setattr(
+        "dicom_privacy_auditor.review.store.pydicom.dcmread",
+        lambda *args, **kwargs: dataset,
+    )
+
+    assert metadata_diff("source.dcm", "candidate.dcm") == []

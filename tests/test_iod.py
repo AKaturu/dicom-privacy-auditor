@@ -7,7 +7,7 @@ from copy import deepcopy
 from pydicom.dataset import Dataset, FileDataset, FileMetaDataset
 from pydicom.uid import ExplicitVRLittleEndian, SecondaryCaptureImageStorage, generate_uid
 
-from dicom_privacy_auditor.iod.evaluate import iod_context_for_pair, type_constraints
+from dicom_privacy_auditor.iod.evaluate import iod_context_for_pair, tag_path_index, type_constraints
 from dicom_privacy_auditor.iod.registry import load_registry, prepare_registry, resolve_context
 from dicom_privacy_auditor.ps315.evaluate import evaluate_pair
 
@@ -79,6 +79,16 @@ def test_type_constraints():
     assert type_constraints("1", True)["requires_nonempty"]
     assert not type_constraints("2", True)["may_remove"]
     assert type_constraints("1C", False)["condition"] == "unresolved"
+
+
+def test_tag_path_index_accepts_none_sequence_value():
+    dataset = Dataset()
+    dataset.add_new((0x0040, 0xA730), "SQ", [])
+    dataset[(0x0040, 0xA730)]._value = None
+
+    result = tag_path_index(dataset)
+
+    assert list(result) == ["0040A730"]
 
 
 def test_iod_aware_flags_candidate_only_undefined_attribute(tmp_path, monkeypatch):

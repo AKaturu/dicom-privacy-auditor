@@ -479,7 +479,7 @@ def metadata_diff(source_path: str | Path, candidate_path: str | Path) -> list[d
             keyword = element.keyword or str(element.tag)
             path = f"{prefix}.{keyword}" if prefix else keyword
             if element.VR == "SQ":
-                for index, item in enumerate(element.value):
+                for index, item in enumerate(element.value or ()):
                     output.update(flatten(item, f"{path}[{index}]"))
             else:
                 output[path] = (str(element.tag), element.VR, str(element.value))
