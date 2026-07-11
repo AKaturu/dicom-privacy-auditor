@@ -7,6 +7,9 @@
   image-shape, border-localization, and similarity edge cases.
 - Added Streamlit AppTest coverage for the review workstation, fixed single-frame case loading, and
   validated reviewer codes and optional pixel-region coordinates before saving decisions.
+- Published PEP 561 typing metadata, added JSON Schema stubs, and removed blanket mypy import
+  suppression.
+- Modernized SPDX and license-file package metadata.
 - Canonicalized MIDI-B nested `tag_ds` paths and evaluated the exact sequence occurrence named by the
   answer key instead of relying on a top-level terminal-tag lookup.
 - Made baseline MIDI campaigns apply imported hidden-pixel bounding boxes automatically.

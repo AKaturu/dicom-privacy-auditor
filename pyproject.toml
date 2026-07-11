@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=69", "wheel"]
+requires = ["setuptools>=77", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -9,6 +9,7 @@ description = "A reproducible DICOM privacy auditor and synthetic de-identificat
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"
+license-files = ["LICENSE"]
 authors = [{name = "Abinav Katuru"}]
 keywords = ["DICOM", "radiology", "privacy", "de-identification", "benchmark"]
 classifiers = [
@@ -37,6 +38,7 @@ dev = [
   "ruff>=0.6,<1.0",
   "mypy>=1.11,<3.0",
   "types-requests>=2.32,<3.0",
+  "types-jsonschema>=4.23,<5.0",
   "tomli>=2.0,<3.0; python_version < '3.11'",
   "bandit>=1.8,<2.0",
   "hypothesis>=6.100,<7.0",
@@ -113,12 +115,11 @@ Issues = "https://github.com/AKaturu/dicom-privacy-auditor/issues"
 where = ["src"]
 
 [tool.setuptools.package-data]
-dicom_privacy_auditor = ["schemas/*.json"]
+dicom_privacy_auditor = ["py.typed", "schemas/*.json"]
 
 [tool.mypy]
 python_version = "3.12"
 files = ["src/dicom_privacy_auditor"]
-ignore_missing_imports = true
 warn_unused_configs = true
 warn_redundant_casts = true
 warn_unused_ignores = true
