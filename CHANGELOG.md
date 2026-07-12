@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Upgraded CI and release workflows to Node 24-compatible immutable action revisions.
 - Constrained UI/dev installs below PyArrow 25 after its Linux Streamlit conversion path caused
   native crashes on Python 3.10-3.12.
 - Clarified pixel-bound normalization, logged skipped malformed DICOM candidates, and hardened
